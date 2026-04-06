@@ -1,0 +1,84 @@
+{
+  "name": "ouroboros-tester",
+  "version": "1.0.0",
+  "description": "Ouroboros Tester — AI-driven domain test automation framework with Playwright",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./base/*": {
+      "types": "./dist/base/*.d.ts",
+      "default": "./dist/base/*.js"
+    },
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "default": "./dist/components/*.js"
+    },
+    "./fixtures/*": {
+      "types": "./dist/fixtures/*.d.ts",
+      "default": "./dist/fixtures/*.js"
+    },
+    "./helpers/*": {
+      "types": "./dist/helpers/*.d.ts",
+      "default": "./dist/helpers/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "default": "./dist/utils/*.js"
+    },
+    "./pages/*": {
+      "types": "./dist/pages/*.d.ts",
+      "default": "./dist/pages/*.js"
+    }
+  },
+  "files": [
+    "dist",
+    "templates",
+    ".github/agents",
+    ".github/prompts",
+    ".github/workflows",
+    ".github/instructions"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "test": "npx playwright test --config=src/tests/playwright.config.ts",
+    "test:headed": "npx playwright test --config=src/tests/playwright.config.ts --headed",
+    "test:ui": "npx playwright test --config=src/tests/playwright.config.ts --ui",
+    "test:debug": "npx playwright test --config=src/tests/playwright.config.ts --debug",
+    "test:report": "npx playwright show-report",
+    "test:codegen": "npx playwright codegen",
+    "typecheck": "tsc --noEmit",
+    "validate:specs": "node scripts/validate-spec.mjs --all",
+    "validate:spec": "node scripts/validate-spec.mjs",
+    "api:auth": "node scripts/api-probe.mjs auth --json",
+    "api:probe": "node scripts/api-probe.mjs probe",
+    "api:smoke": "node scripts/api-probe.mjs smoke --json",
+    "api:extract-auth": "node scripts/api-probe.mjs extract-auth --json",
+    "api:intercept-snippet": "node scripts/api-probe.mjs intercept-snippet --json"
+  },
+  "keywords": [
+    "ouroboros-tester",
+    "playwright",
+    "test-automation",
+    "ai",
+    "pom",
+    "page-object-model",
+    "e2e",
+    "testing"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^25.5.2",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

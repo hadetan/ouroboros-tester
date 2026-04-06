@@ -1,0 +1,34 @@
+{
+  "$schema": "./schemas/config.schema.json",
+  "project": {
+    "name": "",
+    "baseUrl": "",
+    "apiBaseUrl": ""
+  },
+  "auth": {
+    "required": false,
+    "loginUrl": "",
+    "credentials": {
+      "default": {
+        "username": "",
+        "password": ""
+      }
+    },
+    "roles": {},
+    "storageStatePath": "playwright/.auth/storage-state.json",
+    "sessionTimeout": 3600
+  },
+  "exploration": {
+    "screenshotOnAction": true,
+    "captureNetworkRequests": true,
+    "maxSectionsPerPage": 50,
+    "waitTimeout": 5000
+  },
+  "testing": {
+    "outputDir": "src/tests",
+    "browsers": ["chromium"],
+    "parallel": true,
+    "retries": 1,
+    "traceOnFailure": true
+  }
+}

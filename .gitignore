@@ -1,0 +1,29 @@
+# Playwright Auth State
+playwright/.auth/
+
+# Ouroboros config (contains credentials — do not commit)
+.ouroboros/config.json
+
+# Screenshots (generated during exploration)
+.ouroboros/screenshots/
+
+# Node
+node_modules/
+dist/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+.playwright-mcp
+.ouroboros
+src/*
