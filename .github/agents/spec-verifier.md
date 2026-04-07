@@ -32,15 +32,15 @@ Instead of checking "did the explorer document this?", ask:
 **For each Interaction Recipe in the spec, reproduce it step by step using the EXACT commands documented:**
 
 1. Set up the preconditions documented in the recipe
-2. Use the **exact locator** documented in "Proven Locator"
-3. Use the **exact method** documented in "Interaction Method"
-4. Check for the **exact success signal** documented
+2. Use the **exact locator** documented in the "Locator" field
+3. Use the **exact method** documented in the "Method" field
+4. Check for the **exact success signal** documented in the "Signal" field
 5. Verify the **signal timing** (immediate vs async) is accurate
-6. **Execute the Assertion Command** documented in the recipe — does it pass or fail?
-7. If the recipe has no Assertion Command, this is a gap — add one by running the appropriate Playwright assertion
+6. **Execute the Assert command** documented in the recipe — does it pass or fail?
+7. If the recipe has no Assert field, this is a gap — add one by running the appropriate Playwright assertion
 
 **For each recipe, the outcome is one of:**
-- ✅ **Confirmed**: recipe works exactly as documented, including Assertion Command
+- ✅ **Confirmed**: recipe works exactly as documented, including Assert
 - ⚠️ **Corrected**: recipe works but with different locator/method/signal/assertion — update the spec
 - ❌ **Failed**: recipe doesn't work at all — investigate and rewrite
 - 🆕 **Missing**: an interactive component on the page has no recipe — add one
@@ -84,6 +84,40 @@ For each finding:
 - If spec is inaccurate: Fix the spec and add `corrected: true` with notes
 - If spec is missing something: Add the missing requirement with `added-by: verifier`
 
+### Phase 5: Flow Simulation (MANDATORY for sections with CRUD)
+**Chain recipes into realistic end-to-end user flows to catch multi-step timing issues that individual recipe verification misses.**
+
+The purpose of this phase is to catch issues like: "Create works alone, but after Create → the grid doesn't refresh → Edit can't find the new row" or "Delete works, but the success alert from a previous Create is still visible and confuses the assertion."
+
+**For each CRUD section, execute these flows in sequence WITHOUT resetting the page between steps:**
+
+1. **Create → Verify → Edit → Verify → Delete → Verify flow:**
+   - Execute the Create recipe chain (open form → fill → save)
+   - WITHOUT refreshing, locate the created record in the grid (may require pagination)
+   - Execute the Edit recipe chain on that record (open edit → modify a field → save)
+   - WITHOUT refreshing, verify the edit is reflected in the grid
+   - Execute the Delete recipe chain on that record (click delete icon → confirm)
+   - Verify the record is gone from the grid
+
+2. **After each step, check for side effects documented in `## Mutation Side Effects`:**
+   - Are column filters preserved or cleared as documented?
+   - Does pagination stay on the current page as documented?
+   - Does the success alert behave as documented (persists? replaces previous? auto-dismisses?)
+
+3. **If any step in the flow fails** that passed during individual recipe verification:
+   - This is a CRITICAL finding — it means there's a timing/state dependency between operations
+   - Document the failure in `## Concurrency & Timing Notes` with:
+     - Which step failed and what the error was
+     - What state from the previous step caused the issue
+     - Recommended wait/assertion to add between steps
+   - Update the affected recipe's **Preconditions** field to include the inter-step dependency
+
+4. **Verify API contract accuracy** using the probe tool:
+   ```bash
+   node scripts/api-probe.mjs verify-contract --spec src/docs/{module}/{page}/sections/{section}/spec.md --json
+   ```
+   This checks that documented API endpoints, methods, and response shapes match the live API. Fix any discrepancies in the spec's `## API Contracts` table.
+
 ## Verification Dimensions
 
 | Dimension | Question |
@@ -96,10 +130,13 @@ For each finding:
 | Relationship Accuracy | Do cross-page data flows work as documented? |
 | State Accuracy | Are empty/loading/error states documented correctly? |
 | Framework Details | Is `## UI Framework & Component Details` filled in with correct CSS class patterns? |
+| **URL Path Accuracy** | Does the spec's "App URL Path" match the actual browser URL when navigating to the section? |
+| **API Contract Accuracy** | Does `## API Contracts` have one row per CRUD endpoint with response shapes matching the live API? |
+| **Field Name Mappings** | Does `### Field Name Mappings` document all cases where UI labels differ from API field names? |
 | **Recipe Completeness** | Does every interactive component have an Interaction Recipe? |
-| **Recipe Accuracy** | Does every recipe's locator, method, and success signal work when re-executed? |
-| **Recipe Assertion Commands** | Does every recipe have an Assertion Command? Does the command pass when executed? |
-| **Recipe Failed Approaches** | Are "Failed Approaches" sections accurate — do those approaches actually fail? |
+| **Recipe Accuracy** | Does every recipe's locator, method, and signal work when re-executed? |
+| **Recipe Assert Fields** | Does every recipe have an Assert field? Does the assertion pass when executed? |
+| **Recipe Failed Fields** | Are "Failed" sections accurate — do those approaches actually fail? |
 | **Input Fill Methods** | Does the spec document whether standard `.fill()` works for each input, or if native setter is required? |
 | **Conditional Rendering** | Are conditionally rendered elements documented with Render Condition, Trigger Action, and Disappear Condition? |
 | **Element Disambiguation** | When multiple instances of the same component exist, does the spec document how to target the correct one? |
@@ -138,7 +175,7 @@ The explorer may have misidentified HOW a form is displayed (e.g., called a moda
    JSON.stringify(chain, null, 2);
    ```
 3. **Classify the container** based on what the ancestry chain reveals:
-   - Standard modal: `[role="dialog"]` or framework modal class (e.g., `.ant-modal`)
+   - Standard modal: `[role="dialog"]` or framework modal class (e.g., `.{framework}-modal`)
    - Custom/third-party modal: Application-specific class names wrapping the form in a positioned overlay
    - Drawer: Side-sliding panel with overlay/mask
    - Inline panel: Form appears inline within the page content, no overlay, no mask
@@ -242,10 +279,10 @@ The test-architect relies on the spec's API details to build helpers and data fa
 2. **Alternatively, verify API contracts directly** using the probe tool:
    ```bash
    # Verify a GET endpoint returns expected shape
-   node scripts/api-probe.mjs probe GET /api/v1/users --json
+   node scripts/api-probe.mjs probe GET /api/v1/{resource} --json
 
    # Verify a POST endpoint accepts the documented payload
-   node scripts/api-probe.mjs probe POST /api/v1/users --data '{"field":"value"}' --json
+   node scripts/api-probe.mjs probe POST /api/v1/{resource} --data '{"field":"value"}' --json
    ```
    The probe returns: request details, response status, response body shape (TypeScript-like), field inventory (dot-path notation), and auth mechanism used.
 
@@ -272,10 +309,10 @@ A spec CANNOT be marked as `verified` if ANY of the following are true:
 
 **Recipe completeness:**
 1. `## Interaction Recipes` section is empty or has only template comments
-2. Any recipe's "Proven Locator" or "Interaction Method" doesn't work when re-executed
-3. Any recipe is missing "Failed Approaches" for a non-standard interaction method
+2. Any recipe's "Locator" or "Method" doesn't work when re-executed
+3. Any recipe is missing "Failed" documentation for a non-standard interaction method
 4. An element requires a non-standard interaction method (evaluate-click, CSS selector, native setter, etc.) but there's no recipe documenting why
-5. Any recipe is missing "Assertion Command" — every recipe must specify how a test verifies the interaction
+5. Any recipe is missing "Assert" field — every recipe must specify how a test verifies the interaction
 
 **Spec completeness:**
 6. `## UI Framework & Component Details` section is empty or has only template comments
@@ -290,19 +327,24 @@ A spec CANNOT be marked as `verified` if ANY of the following are true:
 15. Any recipe documents `.fill()` as the method for a text input but the spec hasn't verified that the value actually persists after fill (framework may ignore Playwright events)
 16. The spec contains "Not fully explored" or "Requires follow-up" anywhere
 
+**URL Path & API Contracts:**
+17. `## Section Info` is missing "App URL Path" (must be captured from actual browser URL, not guessed)
+18. `## API Contracts` table is empty or missing for sections with CRUD operations
+19. `### Field Name Mappings` table is missing for sections where UI labels differ from API field names (e.g., dropdowns with UUID values)
+
 **Grid-specific:**
-17. Grid rows are zero-dimension wrappers but the spec doesn't document this in `### Accessibility & Locator Notes`
-18. The spec says "grid reloads" without specifying which page/position new records appear on
-19. The page has multiple grids but the spec only documents one
+20. Grid rows are zero-dimension wrappers but the spec doesn't document this in `### Accessibility & Locator Notes`
+21. The spec says "grid reloads" without specifying which page/position new records appear on
+22. The page has multiple grids but the spec only documents one
 
 **Container & API accuracy:**
-20. A form/dialog container type has NOT been verified via DOM ancestry audit (Step A2) — the explorer's classification must be independently confirmed
-21. The spec has CRUD operations but API endpoint details are missing or incomplete (endpoint URL, method, payload field names, response shape, auth mechanism)
-22. API field names differ from what the spec documents (e.g., spec says `user` but API expects `userId`) and the mapping is not explicitly documented
-23. Auth mechanism is undocumented or described vaguely (must specify: token type, storage location, header format)
+23. A form/dialog container type has NOT been verified via DOM ancestry audit (Step A2) — the explorer's classification must be independently confirmed
+24. The spec has CRUD operations but API endpoint details are missing or incomplete (endpoint URL, method, payload field names, response shape, auth mechanism)
+25. API field names differ from what the spec documents (e.g., spec says `user` but API expects `userId`) and the mapping is not explicitly documented
+26. Auth mechanism is undocumented or described vaguely (must specify: token type, storage location, header format)
 
 **Conditional rendering:**
-24. An element is documented as always present but it is actually conditionally rendered (only appears after a trigger action) — the spec must include Render Condition, Trigger Action, and Disappear Condition
-25. An element is documented as conditionally rendered but its trigger action is wrong or incomplete — after performing the documented trigger, the element still doesn't appear
+27. An element is documented as always present but it is actually conditionally rendered (only appears after a trigger action) — the spec must include Render Condition, Trigger Action, and Disappear Condition
+28. An element is documented as conditionally rendered but its trigger action is wrong or incomplete — after performing the documented trigger, the element still doesn't appear
 
 If any of these are true, the verifier MUST fill in the missing information by re-crawling, then mark the spec as `corrected: true`.

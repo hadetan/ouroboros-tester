@@ -13,6 +13,8 @@
  *   node scripts/api-probe.mjs probe <METHOD> <path> [--data '{}'] # Authenticated API call, returns contract
  *   node scripts/api-probe.mjs smoke [path]                        # Auth + API probe + navigation check
  *   node scripts/api-probe.mjs intercept-snippet                   # JS snippet for browser-side network capture
+ *   node scripts/api-probe.mjs run --code '<fn>' [--url <url>]     # Run arbitrary code in authenticated browser
+ *   node scripts/api-probe.mjs verify-contract <spec> [--all]      # Verify spec API contracts against live endpoints
  *
  * Flags:
  *   --json, --raw       Machine-readable JSON output (default: formatted)
@@ -28,7 +30,7 @@
  *   1 — error (check .errors array for details)
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const ROOT = resolve(process.cwd());
@@ -911,6 +913,334 @@ function cmdInterceptSnippet() {
   process.exit(0);
 }
 
+/**
+ * run — Execute an arbitrary async function in an authenticated browser context.
+ *
+ * Use this instead of creating temporary debugging files. The function receives
+ * a Playwright Page (already authenticated via storageState) and an authenticated
+ * APIRequestContext. Return any JSON-serializable value.
+ *
+ * Usage:
+ *   node scripts/api-probe.mjs run --code 'async (page) => await page.title()'
+ *   node scripts/api-probe.mjs run --code 'async (page) => { await page.goto("https://app.example.com/users"); return await page.locator("[role=grid]").count(); }'
+ *   node scripts/api-probe.mjs run --code 'async (page, request) => { const r = await request.get("/api/v1/users"); return (await r.json()).data.length; }'
+ *   node scripts/api-probe.mjs run --url https://example.com/page --code 'async (page) => ...'
+ *
+ * The `page` is pre-navigated to --url if provided, otherwise starts at about:blank.
+ * The `request` uses the same auth token extracted from storageState.
+ *
+ * Flags:
+ *   --code <js>   The async function body (receives page, request)
+ *   --url <url>   Optional URL to navigate to before running the code
+ */
+async function cmdRun() {
+  const config = loadConfig();
+  if (!config) {
+    output('error', 'run', null, ['Config not found at .ouroboros/config.json — run /tc-init first']);
+    return;
+  }
+
+  const code = getFlagValue('--code');
+  if (!code) {
+    output('error', 'run', null, [
+      'Missing --code flag. Usage: node scripts/api-probe.mjs run --code \'async (page) => ...\'',
+    ]);
+    return;
+  }
+
+  const navigateUrl = getFlagValue('--url');
+  const storageStatePath = getStorageStatePath(config);
+
+  if (!existsSync(storageStatePath)) {
+    output('error', 'run', null, [
+      `storageState not found at ${storageStatePath}. Run 'node scripts/api-probe.mjs auth' first.`,
+    ]);
+    return;
+  }
+
+  // Extract auth token for the request context
+  const authResult = extractTokenFromStorageState(storageStatePath);
+  const headers = authResult.token ? buildAuthHeaders(authResult) : {};
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({
+      storageState: storageStatePath,
+      viewport: { width: 1280, height: 948 },
+    });
+    const page = await context.newPage();
+
+    // Create an authenticated request helper that resolves relative paths
+    const apiBaseUrl = config.project.apiBaseUrl;
+    const requestHelper = {
+      _resolve(path) {
+        return path.startsWith('http') ? path : `${apiBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+      },
+      async get(path, opts = {}) {
+        return fetch(this._resolve(path), { method: 'GET', headers: { ...headers, ...opts.headers } });
+      },
+      async post(path, opts = {}) {
+        return fetch(this._resolve(path), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers, ...opts.headers },
+          body: opts.data ? JSON.stringify(opts.data) : opts.body,
+        });
+      },
+      async put(path, opts = {}) {
+        return fetch(this._resolve(path), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...headers, ...opts.headers },
+          body: opts.data ? JSON.stringify(opts.data) : opts.body,
+        });
+      },
+      async delete(path, opts = {}) {
+        return fetch(this._resolve(path), {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', ...headers, ...opts.headers },
+          body: opts.data ? JSON.stringify(opts.data) : opts.body,
+        });
+      },
+    };
+
+    if (navigateUrl) {
+      const fullUrl = navigateUrl.startsWith('http')
+        ? navigateUrl
+        : `${config.project.baseUrl}${navigateUrl.startsWith('/') ? '' : '/'}${navigateUrl}`;
+      await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    }
+
+    // Build and execute the user function
+    // Security: only accept function expressions, not arbitrary statements
+    const fn = new Function('page', 'request', `return (${code})(page, request);`);
+    const result = await fn(page, requestHelper);
+
+    await browser.close();
+    browser = null;
+
+    output('success', 'run', {
+      result: result !== undefined ? result : null,
+      navigatedTo: navigateUrl || null,
+    });
+  } catch (err) {
+    if (browser) await browser.close().catch(() => {});
+    output('error', 'run', null, [err.message]);
+  }
+}
+
+/**
+ * verify-contract — Read a spec file, extract the API Contracts table, and probe
+ * each endpoint live to verify they match.
+ *
+ * Usage:
+ *   node scripts/api-probe.mjs verify-contract src/docs/.../spec.md --json
+ *   node scripts/api-probe.mjs verify-contract --all --json
+ *
+ * For each row in the spec's ## API Contracts table:
+ *   1. Probes the endpoint with the documented method
+ *   2. Compares response status, response wrapper path, and field names
+ *   3. Reports matches and mismatches
+ */
+async function cmdVerifyContract() {
+  const config = loadConfig();
+  if (!config) {
+    output('error', 'verify-contract', null, ['Config not found']);
+    return;
+  }
+
+  const specPath = positionalArgs[0];
+  const verifyAll = rawArgs.includes('--all');
+
+  let specFiles = [];
+  if (verifyAll) {
+    const docsDir = join(ROOT, 'src', 'docs');
+    specFiles = findSpecFiles(docsDir);
+  } else if (specPath) {
+    specFiles = [resolve(specPath)];
+  } else {
+    output('error', 'verify-contract', null, [
+      'Usage: node scripts/api-probe.mjs verify-contract <spec-path> | --all [--json]',
+    ]);
+    return;
+  }
+
+  const storageStatePath = getStorageStatePath(config);
+  const authResult = extractTokenFromStorageState(storageStatePath);
+  if (!authResult.token) {
+    output('error', 'verify-contract', null, [
+      'No auth token. Run `node scripts/api-probe.mjs auth` first.',
+    ]);
+    return;
+  }
+
+  const headers = buildAuthHeaders(authResult);
+  const results = [];
+
+  for (const file of specFiles) {
+    if (!existsSync(file)) {
+      results.push({ file, status: 'error', error: 'File not found' });
+      continue;
+    }
+
+    const content = readFileSync(file, 'utf-8');
+    const contracts = parseApiContracts(content);
+
+    if (contracts.length === 0) {
+      results.push({
+        file: file.replace(ROOT + '/', ''),
+        status: 'skip',
+        reason: 'No ## API Contracts table found (falling back to ## API Endpoints)',
+        contracts: [],
+      });
+      // Try legacy ## API Endpoints table
+      const legacyContracts = parseApiEndpoints(content);
+      if (legacyContracts.length > 0) {
+        for (const c of legacyContracts) {
+          const probeResult = await probeContract(c, config, headers);
+          results.push({
+            file: file.replace(ROOT + '/', ''),
+            ...probeResult,
+          });
+        }
+      }
+      continue;
+    }
+
+    for (const c of contracts) {
+      const probeResult = await probeContract(c, config, headers);
+      results.push({
+        file: file.replace(ROOT + '/', ''),
+        ...probeResult,
+      });
+    }
+  }
+
+  const failures = results.filter(r => r.status === 'mismatch' || r.status === 'error');
+  output(
+    failures.length === 0 ? 'success' : 'error',
+    'verify-contract',
+    { results, total: results.length, passed: results.filter(r => r.status === 'match').length, failed: failures.length },
+    failures.map(f => `${f.operation || f.file}: ${f.error || f.mismatches?.join('; ')}`),
+  );
+}
+
+/** Recursively find spec.md files */
+function findSpecFiles(dir) {
+  const results = [];
+  let entries;
+  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return results; }
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) results.push(...findSpecFiles(fullPath));
+    else if (entry.name === 'spec.md') results.push(fullPath);
+  }
+  return results;
+}
+
+/** Parse ## API Contracts table from spec markdown */
+function parseApiContracts(content) {
+  return parseMarkdownTable(content, 'API Contracts');
+}
+
+/** Parse legacy ## API Endpoints table from spec markdown */
+function parseApiEndpoints(content) {
+  return parseMarkdownTable(content, 'API Endpoints');
+}
+
+/** Generic markdown table parser: find a heading, parse its table rows */
+function parseMarkdownTable(content, heading) {
+  const headingPattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*$`, 'm');
+  const match = content.match(headingPattern);
+  if (!match) return [];
+
+  const afterHeading = content.slice(match.index + match[0].length);
+  const lines = afterHeading.split('\n');
+  const rows = [];
+  let headerCols = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) {
+      if (headerCols && rows.length > 0) break; // end of table
+      if (trimmed.startsWith('#')) break; // next section
+      if (trimmed.startsWith('<!--')) continue; // comment
+      continue;
+    }
+    // Skip separator rows
+    if (/^\|[\s-|]+\|$/.test(trimmed)) continue;
+
+    const cells = trimmed.split('|').slice(1, -1).map(c => c.trim());
+    if (!headerCols) {
+      headerCols = cells.map(c => c.toLowerCase().replace(/\s+/g, '_'));
+      continue;
+    }
+    if (cells.every(c => c === '' || c.startsWith('<!--'))) continue;
+
+    const row = {};
+    headerCols.forEach((col, i) => { row[col] = cells[i] || ''; });
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** Probe a single API contract row and compare results */
+async function probeContract(contract, config, headers) {
+  const method = (contract.method || 'GET').toUpperCase();
+  const endpoint = contract.endpoint || contract.path || '';
+  const operation = contract.operation || `${method} ${endpoint}`;
+
+  if (!endpoint || endpoint.includes('{') || endpoint === '—' || endpoint === '-') {
+    return { operation, status: 'skip', reason: 'Endpoint has placeholders or is empty' };
+  }
+
+  const fullUrl = endpoint.startsWith('http')
+    ? endpoint
+    : `${config.project.apiBaseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
+  try {
+    const response = await fetch(fullUrl, { method, headers });
+    const contentType = response.headers.get('content-type') || '';
+    let body = null;
+    if (contentType.includes('application/json')) {
+      body = await response.json();
+    }
+
+    const mismatches = [];
+
+    // Check response status
+    const expectedStatus = contract.response?.match(/^(\d{3})/)?.[1];
+    if (expectedStatus && String(response.status) !== expectedStatus) {
+      mismatches.push(`Expected status ${expectedStatus}, got ${response.status}`);
+    }
+
+    // Check response shape if documented
+    if (contract.response_wrapper && body) {
+      const wrapperPath = contract.response_wrapper.replace(/[`'"]/g, '').trim();
+      const parts = wrapperPath.split('.');
+      let current = body;
+      for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+          current = current[part];
+        } else {
+          mismatches.push(`Response wrapper path '${wrapperPath}' not found in response`);
+          break;
+        }
+      }
+    }
+
+    return {
+      operation,
+      status: mismatches.length > 0 ? 'mismatch' : 'match',
+      httpStatus: response.status,
+      responseShape: body ? inferShape(body) : 'non-json',
+      fieldInventory: body ? flattenFields(body).slice(0, 20) : [],
+      mismatches: mismatches.length > 0 ? mismatches : undefined,
+    };
+  } catch (err) {
+    return { operation, status: 'error', error: err.message };
+  }
+}
+
 // Router
 
 const commands = {
@@ -919,6 +1249,8 @@ const commands = {
   probe: cmdProbe,
   smoke: cmdSmoke,
   'intercept-snippet': cmdInterceptSnippet,
+  run: cmdRun,
+  'verify-contract': cmdVerifyContract,
 };
 
 if (!command || !commands[command]) {
@@ -933,12 +1265,16 @@ Commands:
   probe <METHOD> <path> [--data '{}'] Make authenticated API call, return full contract
   smoke [path]                        Auth + API probe + navigation check (all-in-one)
   intercept-snippet                   JS snippet for browser-side network capture
+  run --code '<fn>' [--url <url>]     Run code in authenticated browser context
+  verify-contract <spec> [--all]      Verify spec API contracts against live endpoints
 
 Flags:
   --json, --raw       Machine-readable JSON output
   --storageState <p>  Override storageState file path
   --data <json>       Request payload for probe POST/PUT/PATCH
   --brief             Truncate large response bodies
+  --code <js>         Async function for 'run' command
+  --url <url>         URL to navigate before running code
 
 Examples:
   node scripts/api-probe.mjs auth
@@ -946,6 +1282,10 @@ Examples:
   node scripts/api-probe.mjs probe POST /api/v1/users --data '{"name":"Test"}' --json
   node scripts/api-probe.mjs smoke /api/v1/users
   node scripts/api-probe.mjs intercept-snippet --json
+  node scripts/api-probe.mjs run --code 'async (page) => page.title()' --json
+  node scripts/api-probe.mjs run --url /OperationsData/Users --code 'async (page) => page.locator("[role=grid]").count()' --json
+  node scripts/api-probe.mjs verify-contract src/docs/module/page/sections/section/spec.md --json
+  node scripts/api-probe.mjs verify-contract --all --json
 `);
   process.exit(1);
 }

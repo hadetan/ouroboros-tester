@@ -209,7 +209,7 @@ For each modal, drawer, or form panel:
 
 3. **Document EVERY close mechanism with precise testing:**
    - **Cancel button**: Click the Cancel/Close button inside the container
-   - **X icon**: Click the close icon (may be `anticon-close`, `img[alt="close"]`, or similar)
+   - **X icon**: Click the close icon (may be `[aria-label="close"]`, `[aria-label="Close"]`, `img[alt="close"]`, or a framework-specific icon class)
    - **Escape key**: Press Escape while focus is inside the container
    - **Backdrop/mask click**: If a backdrop mask element exists (identified in ancestry audit), dispatch a click event directly on the MASK element — do NOT test by clicking "somewhere else on the page" which may click a different interactive element:
      ```js
@@ -324,13 +324,14 @@ When a section contains **multiple instances of the same component type** (e.g.,
 2. **Map each instance to its purpose** — use parent container context, neighboring labels, heading text, or DOM position to identify which is which:
    ```js
    // Example: disambiguate multiple dropdowns in a section
-   const selects = document.querySelectorAll('.ant-select');
+   // Replace '.your-select-class' with the actual framework class detected in Phase 2
+   const selects = document.querySelectorAll('[role="combobox"], [role="listbox"], select');
    JSON.stringify([...selects].map((s, i) => ({
      index: i,
      closestLabel: s.closest('[class*="form-item"]')?.querySelector('label')?.textContent?.trim(),
      parentClass: s.parentElement?.className?.substring(0, 80),
      parentId: s.parentElement?.id,
-     currentValue: s.querySelector('.ant-select-selection-item')?.textContent?.trim(),
+     currentValue: s.querySelector('[class*="selection"]')?.textContent?.trim(),
      rect: s.getBoundingClientRect()
    })));
    ```
@@ -463,13 +464,14 @@ Record in the spec:
 2. Click delete and **immediately audit the confirmation UI:**
    ```js
    // Capture confirmation element details
-   const confirms = document.querySelectorAll('.ant-popconfirm, .confirm-dialog, [role="alertdialog"]');
+   // Use framework-specific selectors detected in Phase 2 (e.g., '.popconfirm', '.confirm-dialog')
+   const confirms = document.querySelectorAll('[role="alertdialog"], [class*="confirm"], [class*="popover"]');
    JSON.stringify([...confirms].map(c => ({
      classes: c.className,
      visible: c.offsetHeight > 0,
      rect: c.getBoundingClientRect(),
      buttons: [...c.querySelectorAll('button')].map(b => ({ text: b.textContent.trim(), classes: b.className })),
-     message: c.querySelector('.ant-popconfirm-message, .confirm-message, [class*="message"]')?.textContent?.trim()
+     message: c.querySelector('[class*="message"]')?.textContent?.trim()
    })));
    ```
 3. Test BOTH confirm and cancel paths
@@ -516,19 +518,22 @@ For each page/section, create a spec file following the template at `templates/s
 
 **CRITICAL: The Interaction Recipes section is the most important deliverable.** Every interaction you performed during Phases 3-6 must be captured as a recipe. A spec without recipes is incomplete — the test-writer cannot work from it.
 
-Each recipe must include:
-- **Proven Locator**: the exact locator expression you used and tested
-- **Interaction Method**: which method worked (click, evaluate-click, fill, native setter, etc.)
-- **Why This Method**: what about the element required this specific approach — include measured evidence (dimensions, position, ARIA state)
-- **Success Signal**: what observable DOM change proves the interaction worked
-- **Signal Timing**: whether the signal appears immediately or with a delay (and approximate delay)
-- **Assertion Command**: the exact Playwright assertion that works for verifying this interaction in a test (e.g., `expect(page.locator('.ant-alert-success')).toBeVisible()`)
-- **Failed Approaches**: what you tried that didn't work AND the specific error or reason (prevents downstream agents from repeating mistakes)
+Each recipe must include (using the format from the template):
+- **Locator**: the exact locator expression you used and tested
+- **Method**: which method worked (click, evaluate-click, fill, native setter, etc.) — if non-standard, include why with measured evidence (dimensions, position, ARIA state)
+- **Assert**: the exact Playwright assertion that works for verifying this interaction in a test
+- **Signal**: what observable DOM change proves the interaction worked + **Timing** (immediate or async ~Xms)
+- **Preconditions**: what must be true before the interaction
+- **Render** (only for conditional elements): behavior (state-bound/once-triggered), trigger action, disappear condition
+- **Failed** (only if non-standard method): what you tried that didn't work AND the specific error
 
 **Fill in ALL sections of the template** — especially:
+- `## Section Info` (with **App URL Path** captured from the actual browser URL, NOT guessed from menu text)
 - `## UI Framework & Component Details` (what renders the UI)
 - `## Interaction Recipes` (the behavioral contract — most critical)
 - `## Form Fields` (with full validation rules, exact error messages, and locator strategies)
+- `## API Contracts` (exact endpoints, methods, payload field names, response shapes, auth — from network capture)
+- `### Field Name Mappings` (where UI labels differ from API field names — e.g., dropdown shows display text but API expects a UUID)
 - `## Mutation Side Effects` (what changes after each operation — from DOM Diffs)
 - `## Feedback Mechanisms` (exact type, locator, behavior, and persistence for every feedback element)
 
@@ -629,7 +634,7 @@ After completing each section, update:
 17. **EVERY grid with pagination must document where new records appear** — after creating a record, navigate ALL pages. Document the sort order, which page the record lands on, and whether the grid auto-navigates there. Never write just "grid reloads."
 18. **Count and document EVERY distinct grid on the page separately** — if a page has 2+ grids, each is its own section with its own columns, actions, pagination, and CRUD capabilities. Missing a grid is a critical gap.
 19. **EVERY input field must have its fill method verified** — try standard `.fill()` and then check the value stuck. If the framework ignores Playwright's events, try the native value setter approach and document which method works.
-20. **EVERY recipe must include an Assertion Command** — the exact Playwright assertion a test would use to verify the interaction succeeded. If the obvious assertion would fail (e.g., toBeVisible on zero-height rows), document the working alternative.
+20. **EVERY recipe must include an Assert field** — the exact Playwright assertion a test would use to verify the interaction succeeded. If the obvious assertion would fail (e.g., toBeVisible on zero-height rows), document the working alternative.
 21. **NEVER write "Not fully explored" or "Requires follow-up"** — if you haven't proven something, go back and explore it now. An incomplete spec gives the test-writer false confidence and causes failures.
 22. **NEVER classify a container as "inline panel" just because standard dialog selectors don't match** — always perform the DOM Ancestry Audit (Phase 3d) to identify the actual container class, position style, and backdrop presence. A custom modal with no `role="dialog"` is still a modal if it has a backdrop mask and centered positioning.
 23. **EVERY conditionally rendered element must document its render condition** — if an element only appears after a user action (toggle, select, hover, expand), document the exact trigger action and disappear condition. An element documented without its render condition will cause the verifier and test-writer to fail immediately because they will expect it to exist on page load.

@@ -24,13 +24,13 @@ Ouroboros Tester Dashboard
 Domain: {project-name} ({base-url})
 
 Pages:
-  ● users-management     ████████████░░░░  75%  [3/4 sections explored, 2 verified, 1 tested]
+  ● inventory-management  ████████████░░░░  75%  [3/4 sections explored, 2 verified, 1 tested]
   ● dashboard             ██████░░░░░░░░░░  37%  [2/3 sections explored, 1 verified, 0 tested]
   ○ settings              ░░░░░░░░░░░░░░░░   0%  [not started]
 
 Relationships:
-  ✓ users-management/user-form → dashboard/recent-activity
-  ○ settings/roles → users-management/user-form (unverified)
+  ✓ inventory-management/create-form → dashboard/recent-activity
+  ○ settings/roles → inventory-management/create-form (unverified)
 
 Test Infrastructure: ✓ Set up
 Tests: 12 written, 10 passing, 2 failing
@@ -38,5 +38,5 @@ Tests: 12 written, 10 passing, 2 failing
 Next Steps:
   → /tc-explore https://app.example.com/settings --name "Settings"
   → /tc-verify dashboard
-  → /tc-write-tests users-management --section user-list
+  → /tc-write-tests inventory-management --section item-list
 ```

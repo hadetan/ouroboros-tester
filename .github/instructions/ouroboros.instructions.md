@@ -30,6 +30,9 @@ You are working in the Ouroboros Tester project — an AI-driven domain test aut
 - `src/tests/` — Playwright test cases only
 - `src/tests/fixtures/auth.setup.ts` — Auth setup
 - `src/tests/{module}/{page}/{section}.spec.ts` — Test files
+- `scripts/api-probe.mjs` — Auth, API probing, network capture, ad-hoc browser execution
+- `scripts/validate-spec.mjs` — Spec completeness validation (quality gate for explorer/verifier)
+- `scripts/validate-architecture.mjs` — Architecture validation (quality gate for architect)
 
 ## Conventions
 

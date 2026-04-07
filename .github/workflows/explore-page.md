@@ -47,11 +47,17 @@ Navigate to a target page, discover all sections, understand CRUD operations, an
 
 <step name="discover_sections">
 1. Navigate to the target URL
-2. Take accessibility snapshot via `mcp_microsoft_pla_browser_snapshot`
-3. Take screenshot via `mcp_microsoft_pla_browser_take_screenshot`
-4. Analyze the snapshot to identify distinct sections
-5. Create section directory for each discovered section
-6. Update page spec with section list
+2. **Capture the actual browser URL** after navigation completes (the server may redirect or rewrite the URL):
+   ```js
+   // Run via browser_evaluate after navigation
+   window.location.pathname + window.location.search
+   ```
+   Record this as the **App URL Path** — write it into the page spec's `## Page Info` and each section spec's `## Section Info`.
+3. Take accessibility snapshot via `mcp_microsoft_pla_browser_snapshot`
+4. Take screenshot via `mcp_microsoft_pla_browser_take_screenshot`
+5. Analyze the snapshot to identify distinct sections
+6. Create section directory for each discovered section
+7. Update page spec with section list
 </step>
 
 <step name="explore_each_section">
@@ -66,13 +72,16 @@ For each section (or filtered by --sections):
 8. Update page spec with section completion status
 
 **CHECKPOINT:** Before marking a section as explored, verify the spec contains:
+- [ ] `## Section Info` — **App URL Path** is filled with exact browser path (not guessed from nav menu)
 - [ ] `## UI Framework & Component Details` — all tables filled
 - [ ] `### Accessibility & Locator Notes` — at least one row per interactive component
 - [ ] `### Layout Constraints` — viewport and modal overflow documented
 - [ ] `## Form Fields` — validation column has format rules, not just "required"
+- [ ] `## API Contracts` — one row per CRUD endpoint with actual response shapes and auth mechanism
+- [ ] `### Field Name Mappings` — UI label → API field name for any mismatches (especially dropdowns with UUIDs)
 - [ ] `## Mutation Side Effects` — one row per CRUD operation with explicit filter/pagination/alert columns
 - [ ] `## Feedback Mechanisms` — one row per operation with exact locator and Assertion Command (no generic "toast")
-- [ ] `## Interaction Recipes` — one recipe per distinct interaction, each with Assertion Command
+- [ ] `## Interaction Recipes` — one recipe per distinct interaction, each with Assert and Signal fields
 - [ ] `## Create vs Edit Form Differences` — filled if section has both create and edit forms
 - [ ] `## Concurrency & Timing Notes` — filled if section has mutations
 - [ ] No "Not fully explored" or "Requires follow-up" text anywhere in the spec

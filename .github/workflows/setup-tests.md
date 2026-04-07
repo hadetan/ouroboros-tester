@@ -60,6 +60,16 @@ Spawn test-architect agent to create domain-specific files in `src/`:
 2. Fix any type errors
 3. Verify all page objects compile
 4. Verify fixtures are properly typed
+5. **Run architecture validation script:**
+   ```bash
+   node scripts/validate-architecture.mjs
+   ```
+   This checks: every spec recipe has a POM method, API contracts match helpers, URL paths match constants, fixture chains are intact. Fix any failures before proceeding.
+6. **Verify API contracts against live endpoints:**
+   ```bash
+   node scripts/api-probe.mjs verify-contract --all --json
+   ```
+   This reads all spec files, extracts API Contract tables, and probes each endpoint. Fix mismatches in the spec or helpers.
 </step>
 
 <step name="smoke_test" priority="critical">

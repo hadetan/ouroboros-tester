@@ -38,8 +38,8 @@ You are an expert Playwright test author. You write comprehensive, maintainable 
 ### Phase 2b: Extract Implementation Details from Spec (MANDATORY — before writing ANY code)
 From the spec's `## UI Framework & Component Details` and `## Interaction Recipes` sections, extract:
 1. **Frameworks** — Know which CSS class patterns to use
-2. **Interaction Recipes** — This is the authoritative source. For every interaction (open form, fill dropdown, apply filter, confirm delete, etc.), the recipe documents the exact locator, method, success signal, AND Assertion Command. The POM should already implement these — verify it does.
-3. **Assertion Commands** — Each recipe's Assertion Command tells you exactly how to verify the interaction in a test. Use these commands directly in your test assertions.
+2. **Interaction Recipes** — This is the authoritative source. For every interaction (open form, fill dropdown, apply filter, confirm delete, etc.), the recipe documents the exact locator, method, signal, AND Assert command. The POM should already implement these — verify it does.
+3. **Assert commands** — Each recipe's Assert field tells you exactly how to verify the interaction in a test. Use these commands directly in your test assertions.
 4. **Layout constraints** — If the spec says modals exceed viewport, verify the POM's save()/cancel() methods handle this (per the recipe's interaction method)
 5. **Feedback mechanisms** — Use EXACTLY the locator and Assertion Command from the spec's `## Feedback Mechanisms` table. Cross-reference with Interaction Recipes for signal timing.
 6. **Mutation side effects** — From the `## Mutation Side Effects` table, know whether filters reset after delete, whether the grid reloads, etc. Write assertions accordingly.
@@ -48,7 +48,7 @@ From the spec's `## UI Framework & Component Details` and `## Interaction Recipe
 9. **Validation rules** — From the `## Form Fields` table, verify the DataFactory generates compliant data.
 
 **If the Interaction Recipes section is empty or missing, STOP and report that the spec is incomplete. Do NOT guess or discover interaction details through trial-and-error.**
-**If any recipe is missing an Assertion Command, report the gap but use the Success Signal to derive a reasonable assertion.**
+**If any recipe is missing an Assert field, report the gap but use the Signal description to derive a reasonable assertion.**
 
 ### Phase 2c: Virtual Grid Awareness (MANDATORY before writing grid assertions)
 Check the spec's `### Accessibility & Locator Notes` for grid row visibility:
@@ -141,7 +141,7 @@ await page.keyboard.press('Escape');
 const saveBtn = page.getByRole('button', { name: 'Save' });
 await saveBtn.scrollIntoViewIfNeeded();
 await saveBtn.click();
-await page.request.delete(`${API_BASE}/v1/users/${userId}`);
+await page.request.delete(`${API_BASE}/v1/{resource}/${entityId}`);
 ```
 
 ### Phase 5: Run Tests and Diagnose Failures
@@ -162,17 +162,32 @@ For each failing test:
    - **Navigation error** → page didn't load or redirect failed
 
 2. **Cross-reference with the spec's Interaction Recipe** for the failing interaction:
-   - Does the POM use the exact locator from "Proven Locator"?
-   - Does the POM use the exact method from "Interaction Method"?
-   - Does the test assertion match the recipe's "Assertion Command"?
-   - Did the POM check the recipe's "Failed Approaches" and avoid them?
-   - If the recipe mentions timing sensitivity, did the test add appropriate waits?
+   - Does the POM use the exact locator from the recipe's "Locator" field?
+   - Does the POM use the exact method from the recipe's "Method" field?
+   - Does the test assertion match the recipe's "Assert" field?
+   - Did the POM check the recipe's "Failed" field and avoid listed approaches?
+   - If the recipe's "Timing" says async, did the test add appropriate waits?
 
 3. **Use Playwright MCP to diagnose** — take a snapshot of the page at the point of failure:
    - Is the element present in the DOM? (use `page.evaluate` to check)
    - Does the element have real dimensions? (check `getBoundingClientRect()`)
    - Is a modal, overlay, or loading spinner blocking interaction?
    - Is the element in the correct state (the expected text, value, or attribute)?
+
+   **Use `api-probe run` for ad-hoc browser debugging** — instead of creating temporary test files and custom inline scripts, use:
+   ```bash
+   # Execute arbitrary code in an authenticated browser context
+   node scripts/api-probe.mjs run --url "{page-url}" --code "async (page, request) => {
+     // Inspect the DOM at the failure point
+     const el = await page.evaluate(() => document.querySelector('{selector}')?.getBoundingClientRect());
+     return el;
+   }"
+   ```
+   This runs in the same authenticated context as tests and returns JSON results directly. Use it to:
+   - Verify a locator finds the expected element
+   - Check element dimensions and visibility
+   - Test an interaction sequence step by step
+   - Inspect grid state, modal presence, or alert text
 
 4. **Fix the root cause** — based on diagnosis:
    - If the POM doesn't match the recipe: update the POM to match
@@ -213,8 +228,8 @@ Mark the section as test-complete in `src/docs/STATE.md`
 20. **NEVER use `toBeVisible()` on `[role="row"]` in virtual-scroll grids** — if the spec's `### Accessibility & Locator Notes` says rows are zero-dimension wrappers, assert on `row.getByRole('gridcell').first()` instead. Check the Interaction Recipe for grid row assertions.
 21. **After creating a record, NEVER assume it’s on the current grid page** — check the spec's `## Mutation Side Effects` for sort order and pagination behavior. Use the POM's pagination/search methods to locate the row. If the POM lacks such methods, add them first.
 22. **When tests fail during Phase 5, follow the Failure Diagnosis Protocol** — classify the error, cross-reference the spec's Interaction Recipe, use Playwright MCP to inspect the actual page state, and fix the root cause. Do NOT apply blind patches. Max 3 iterations per test before escalating.
-23. **Interaction Recipes are the single source of truth** — if a recipe says the interaction method is `evaluate(el => el.click())`, the POM method must use exactly that. If the POM doesn't match the recipe, update the POM first. Never work around a wrong POM method in the spec file.
+23. **Interaction Recipes are the single source of truth** — if a recipe's Method field says `evaluate(el => el.click())`, the POM method must use exactly that. If the POM doesn't match the recipe, update the POM first. Never work around a wrong POM method in the spec file.
 24. **If an interaction has no recipe, STOP and report the gap** — do not attempt to discover interaction mechanics yourself. The explorer should have proven every interaction. A missing recipe means the explorer must re-crawl.
-25. **Use each recipe's Assertion Command** — when asserting the result of an interaction, use the exact Assertion Command documented in the recipe. If the recipe says "DON'T: expect(row).toBeVisible()", the test MUST NOT use that assertion.
+25. **Use each recipe's Assert field** — when asserting the result of an interaction, use the exact assertion from the recipe's Assert field. If the Assert field says "DON'T: expect(row).toBeVisible()", the test MUST NOT use that assertion.
 26. **Check Create vs Edit Form Differences** — before writing edit tests, read the `## Create vs Edit Form Differences` table to know which fields are disabled, hidden, or conditional in edit mode. Never assume edit form matches create form.
 27. **Check Concurrency & Timing Notes** — before writing tests that do sequential CRUD operations, read the `## Concurrency & Timing Notes` section. Add appropriate waits or assertions between operations as recommended.

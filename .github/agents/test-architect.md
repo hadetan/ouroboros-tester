@@ -219,38 +219,38 @@ await expect(row.getByRole('gridcell').first()).toBeVisible(); // ✅ gridcell h
 Every Interaction Recipe in the verified spec MUST map to a POM method. The POM method MUST implement the **exact interaction method** documented in the recipe.
 
 **The recipe is the source of truth.** If a recipe says:
-- Interaction Method: `evaluate(el => el.click())` → the POM method uses `evaluate`
-- Interaction Method: `click()` → the POM method uses standard `click()`
-- Interaction Method: `nativeSetter('text')` → the POM method uses the native HTMLInputElement value setter with input/change events
-- Why This Method: "element outside viewport" → the POM method does NOT add `scrollIntoViewIfNeeded()` — it uses the proven method instead
-- Why This Method: "framework ignores Playwright fill events" → the POM method uses native setter, NOT `.fill()`
-- Success Signal: "dialog appears" with Signal Timing: "async" → the POM method returns after a web-first assertion on the dialog
-- Assertion Command: the POM exposes an assertion method that runs this exact command
+- Method: `evaluate(el => el.click())` → the POM method uses `evaluate`
+- Method: `click()` → the POM method uses standard `click()`
+- Method: `nativeSetter('text')` → the POM method uses the native HTMLInputElement value setter with input/change events
+- Method includes: "element outside viewport" → the POM method does NOT add `scrollIntoViewIfNeeded()` — it uses the proven method instead
+- Method includes: "framework ignores Playwright fill events" → the POM method uses native setter, NOT `.fill()`
+- Signal: "dialog appears" with Timing: "async" → the POM method returns after a web-first assertion on the dialog
+- Assert: the POM exposes an assertion method that runs this exact command
 
 **Recipe → POM mapping example:**
 ```
 Recipe: "Apply Column Filter"
-  Proven Locator: grid header filter icon
-  Interaction Method: evaluate(el => el.click())
-  Success Signal: filter dialog appears
-  Assertion Command: await expect(page.locator('.wj-filter-dialog')).toBeVisible()
+  Locator: grid header filter icon
+  Method: evaluate(el => el.click())
+  Signal: filter dialog appears | Timing: async ~200ms
+  Assert: await expect(page.locator('.{filter-dialog-class}')).toBeVisible()
 
 → POM method:
 async openColumnFilter(columnName: string) {
-  const filterIcon = this.grid.locator(/* proven locator from recipe */);
+  const filterIcon = this.grid.locator(/* locator from recipe */);
   await filterIcon.evaluate(el => (el as HTMLElement).click()); // method from recipe
-  await expect(this.page.locator(/* dialog locator from recipe */)).toBeVisible(); // signal from recipe
+  await expect(this.page.locator(/* dialog locator from recipe */)).toBeVisible(); // assert from recipe
 }
 ```
 
-**If a recipe's "Failed Approaches" lists `click()`, the POM method MUST NOT use `click()`.** The recipe documents what was already tried and failed.
-**If a recipe's "Failed Approaches" lists `fill()`, the POM  method MUST NOT use `.fill()`.** Use the native setter approach documented in the recipe instead.
+**If a recipe's "Failed" field lists `click()`, the POM method MUST NOT use `click()`.** The recipe documents what was already tried and failed.
+**If a recipe's "Failed" field lists `fill()`, the POM method MUST NOT use `.fill()`.** Use the native setter approach documented in the recipe instead.
 
 ### Rule L2: Create vs Edit Form Handling
 Read the spec's `## Create vs Edit Form Differences` table. The POM must handle differences:
 - For fields that are disabled in edit mode: the POM's edit fill method should skip them
-- For fields hidden in edit mode (e.g., Password): the POM's edit fill method should not attempt to fill them
-- For conditional fields (e.g., Select Vendor appears only when Role = Vendor): the POM should expose a method that handles the condition
+- For fields hidden in edit mode (e.g., a field only in create mode): the POM's edit fill method should not attempt to fill them
+- For conditional fields (e.g., a dropdown that appears only when another field has a certain value): the POM should expose a method that handles the condition
 
 ### Rule L3: Modal Close Mechanisms
 Read the spec's recipes for every modal. The POM must expose close methods for ALL documented mechanisms:
@@ -302,3 +302,24 @@ After TypeScript compiles clean, run a real smoke test that exercises the full s
 3. **Navigation smoke:** Navigate to the target page using the POM's navigate method and verify the page loads (readiness check passes)
 
 If any smoke test fails, fix the root cause before proceeding. A clean TypeScript compile does NOT guarantee runtime correctness — the most common architecture bugs (wrong auth mechanism, wrong API field names, wrong response parsing) only surface at runtime.
+
+### Rule O: Verify API Contracts Against Live Endpoints (MANDATORY)
+Before finalizing API helpers, verify that the spec's `## API Contracts` table matches the live API:
+```bash
+node scripts/api-probe.mjs verify-contract --spec src/docs/{module}/{page}/sections/{section}/spec.md --json
+```
+This compares documented endpoints, methods, and response shapes against actual API responses. Fix any mismatches in the helpers — the spec's API Contracts table is authoritative (it was captured from real network traffic).
+
+### Rule P: Architecture Validation Gate (RECOMMENDED after all files are created)
+Run the architecture validation script to verify spec-to-POM mapping:
+```bash
+node scripts/validate-architecture.mjs
+```
+This checks:
+- Every spec recipe has a corresponding POM method
+- API contracts have matching helper constants
+- URL paths match route constants
+- Fixture chains are intact
+- TypeScript compiles clean
+
+Fix any failures before handing off to the test-writer.

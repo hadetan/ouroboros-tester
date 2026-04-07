@@ -2,6 +2,7 @@
 
 ## Page Info
 - **URL:** {page-url}
+- **App URL Path:** {/exact/browser/path — e.g., /Category/SubPage}
 - **Slug:** {page-slug}
 - **Status:** not-started
 - **Explored:** {date}
