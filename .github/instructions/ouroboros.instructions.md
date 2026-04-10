@@ -17,6 +17,7 @@ You are working in the Ouroboros Tester project — an AI-driven domain test aut
 ## Key Files
 
 - `.ouroboros/config.json` — Project configuration
+- `.ouroboros/testing-scope.md` — User-defined testing scope (what to test / what not to test)
 - `src/docs/STATE.md` — Progress tracking
 - `src/docs/DOMAIN-TREE.md` — Cross-page entity relationships
 - `src/docs/` — Page and section specs (domain requirement docs)

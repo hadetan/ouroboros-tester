@@ -106,6 +106,8 @@ URL: /CategoryName/SubPage?tab=listing
 ### Configuration
 `.ouroboros/config.json` (gitignored — contains credentials) controls base URL, auth settings, exploration options, and test output directory. Use `templates/config.template.json` as a reference.
 
+`.ouroboros/testing-scope.md` lets users define what to test and what to skip. All agents read this file before running. If both sections are empty, agents use their default behavior. Created by `/orb-init`.
+
 ## Spec Format
 
 Specs are markdown files in `src/docs/{module}/{page}/sections/{section}/spec.md`. They follow Given/When/Then scenarios and must include:

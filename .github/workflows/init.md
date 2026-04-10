@@ -30,6 +30,7 @@ Create the following (skip if already exists):
 ```
 .ouroboros/
 ├── config.json
+├── testing-scope.md
 └── screenshots/
     └── .gitkeep
 src/docs/
@@ -41,6 +42,8 @@ src/docs/
 
 <step name="create_config">
 Write `.ouroboros/config.json` using the template at `templates/config.template.json` as a reference. Fill in gathered information.
+
+Write `.ouroboros/testing-scope.md` using the template at `templates/testing-scope.md`. Copy it as-is — the user will edit it later to customize what agents test and skip.
 </step>
 
 <step name="initialize_state">
@@ -80,4 +83,6 @@ Ensure `.ouroboros/config.json` and `playwright/.auth/` are in `.gitignore`.
 <step name="report">
 Confirm initialization is complete and suggest the next step:
 → `/orb-explore <first-page-url> --name "<Page Name>" --auth`
+
+Also mention: Edit `.ouroboros/testing-scope.md` to customize what agents should test or skip.
 </step>

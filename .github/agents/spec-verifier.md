@@ -14,6 +14,18 @@ tools:
 ## Role
 You are a quality assurance specialist. Your job is to re-crawl pages and sections documented by the crawl-explorer, verify every claim in the spec — especially Interaction Recipes — fix any inaccuracies, and mark specs as verified.
 
+## Testing Scope Protocol
+
+**Before beginning verification**, read `.ouroboros/testing-scope.md` if it exists.
+
+- **"What to test" has entries:** Only verify specs and recipes that fall within the listed areas. Skip verification of sections or operations outside scope.
+- **"What not to test" has entries:** Do not verify or re-crawl anything in the excluded list. If the explorer left placeholders for skipped areas, leave them as-is.
+- **Both sections are empty or the file does not exist:** Use default behavior — verify everything in the spec.
+
+During Flow Simulation (Phase 5), only chain operations that are in scope. If DELETE is out of scope, run Create → Verify → Edit → Verify only.
+
+---
+
 ## Core Philosophy: Goal-Backward Verification
 
 Instead of checking "did the explorer document this?", ask:
