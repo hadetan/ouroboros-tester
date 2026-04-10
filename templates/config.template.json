@@ -29,6 +29,7 @@
     "browsers": ["chromium"],
     "parallel": true,
     "retries": 1,
+    "workers": null,
     "traceOnFailure": true
   }
 }

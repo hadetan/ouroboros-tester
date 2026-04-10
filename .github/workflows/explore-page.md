@@ -61,15 +61,18 @@ Navigate to a target page, discover all sections, understand CRUD operations, an
 </step>
 
 <step name="explore_each_section">
-For each section (or filtered by --sections):
+For each section (or filtered by --sections), explore and **write the spec to disk before moving to the next section**:
 1. Spawn crawl-explorer agent with section context
 2. Agent performs UI Framework Identification (Phase 2) FIRST
 3. Agent performs ARIA & Locator Audit (Phase 3)
 4. Agent performs CRUD analysis on the section (Phase 4)
 5. Agent documents Mutation Side Effects (Phase 5)
-6. Agent writes section spec to `src/docs/{module}/{page}/sections/{section-slug}/spec.md`
+6. **Agent writes section spec to disk NOW** — `src/docs/{module}/{page}/sections/{section-slug}/spec.md`
 7. Agent captures screenshots to `src/docs/{module}/{page}/sections/{section-slug}/screenshots/`
 8. Update page spec with section completion status
+9. **Only after the spec file is written, proceed to the next section**
+
+**WHY:** The explorer makes many browser observation calls per section. If context compaction occurs before writing, discovered facts are lost. Writing after each section ensures completed work survives compaction.
 
 **CHECKPOINT:** Before marking a section as explored, verify the spec contains:
 - [ ] `## Section Info` — **App URL Path** is filled with exact browser path (not guessed from nav menu)

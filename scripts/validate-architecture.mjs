@@ -173,6 +173,12 @@ function validate() {
     const content = readFileSync(pom, 'utf-8');
     const relPath = relative(ROOT, pom);
     allPomMethods[relPath] = extractPublicMethods(content);
+
+    // Ban waitForTimeout in POM methods — flaky by definition
+    const timeoutMatches = content.match(/waitForTimeout\s*\(/g);
+    if (timeoutMatches) {
+      failures.push(`${relPath}: Uses waitForTimeout (${timeoutMatches.length} occurrence(s)) — replace with condition-based waits`);
+    }
   }
 
   for (const specPath of specs) {
@@ -239,6 +245,15 @@ function validate() {
     const testFixture = readFileSync(testFixturePath, 'utf-8');
     if (!testFixture.includes('data.fixture') && !testFixture.includes('base.fixture')) {
       warnings.push('test.fixture.ts does not import from data.fixture or base.fixture — fixture chain may be broken');
+    }
+  }
+
+  // Verify reporter config has open: 'never' so reports don't auto-open during agent runs
+  const playwrightConfigPath = join(ROOT, 'src', 'tests', 'playwright.config.ts');
+  if (existsSync(playwrightConfigPath)) {
+    const pwConfig = readFileSync(playwrightConfigPath, 'utf-8');
+    if (!pwConfig.includes("open: 'never'") && !pwConfig.includes('open: "never"')) {
+      failures.push('playwright.config.ts: reporter must have open: \'never\' — reports auto-opening blocks agent execution');
     }
   }
 

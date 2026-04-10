@@ -29,6 +29,56 @@ The test-writer agent will implement your recipes EXACTLY as documented. If you 
 
 ---
 
+## Incremental Checkpointing Protocol
+
+> "An unwritten discovery is a lost discovery. Write after every action, not after all actions."
+
+Context compaction will erase your in-memory findings. The ONLY data that survives is what you have **written to files on disk**. This protocol ensures zero information loss.
+
+### Checkpoint Rhythm: Explore One Action → Write It → Explore Next
+
+For each section, you explore one CRUD action at a time (e.g., CREATE, then READ, then UPDATE, then DELETE). After fully exploring each action:
+
+1. **Write immediately.** Create or update the section's `spec.md` with everything you discovered about that action — its recipes, form fields, API contracts, mutation side effects, and feedback mechanisms. Use the template structure so downstream agents can consume partial specs.
+
+2. **First write creates the file.** When you explore the very first action of a section, create the spec file with:
+   - All template sections present
+   - The data you have so far filled in
+   - Remaining template sections left as empty placeholders
+
+3. **Subsequent writes update the file.** When you explore the next action, read the existing spec file back from disk, then edit/append the new discoveries into the correct template sections. The spec is **built up incrementally** across actions.
+
+4. **Cross-action corrections.** If exploring a later action reveals something about an earlier action, update the relevant earlier section in the same spec file immediately.
+
+### What Counts as One Action (Checkpoint Boundaries)
+
+Each of these is a checkpoint boundary — write to disk after completing it:
+
+| Checkpoint | What to Write |
+|-----------|---------------|
+| Page structure + framework detection | Section Info, Description, Location, UI Framework, Layout Constraints, Display Elements, Interactive Elements |
+| READ exploration (grid structure, pagination, filtering) | Interaction Recipes for navigation/filtering/pagination, grid measurements in Accessibility Notes |
+| CREATE exploration (form, validation, submit, post-create state) | CREATE requirement + scenarios, form field recipes, form fields table, API contract, mutation side effects row, feedback row, Create vs Edit differences (create column) |
+| UPDATE exploration (edit trigger, form differences, submit, post-update state) | UPDATE requirement + scenarios, edit-specific recipes, API contract row, mutation side effects row, Create vs Edit differences (edit column) |
+| DELETE exploration (trigger, confirmation, cancel, confirm, post-delete state) | DELETE requirement + scenarios, delete recipes, API contract row, mutation side effects row, feedback row |
+| Additional actions (send password, export, import, etc.) | Requirement + scenarios, recipes, API contract row, side effects row |
+
+### Analysis Paralysis Guard (Per-Action)
+
+**If you have made 12+ consecutive browser observation calls (snapshot, evaluate, screenshot) without writing to the spec file on disk, STOP exploring and write what you have discovered so far.** Then re-read the spec from disk and continue. Unwritten discoveries are lost to context compaction; written specs persist.
+
+### Compaction Recovery Protocol
+
+After a context compaction occurs, you will lose your in-memory discoveries but your written specs survive on disk. To recover and continue:
+
+1. **Re-read your instructions** — read this agent file (`.github/agents/crawl-explorer.md`) to reload the exploration protocol, phases, and rules. Do NOT rely on memory of what the instructions said.
+2. **Re-read the current spec** — read the section's `spec.md` from disk to see what you have already written.
+3. **Re-read STATE.md** — check `src/docs/STATE.md` to see overall progress and which sections/actions remain.
+4. **Resume from where the spec ends** — the last-written action in the spec tells you where to continue. If CREATE recipes exist but UPDATE does not, start UPDATE exploration.
+5. **Do NOT re-explore actions already written** — trust the spec on disk. Only re-explore if you find a contradiction during a later action.
+
+---
+
 ## Process
 
 ### Phase 1: Page Discovery & Section Inventory
@@ -514,9 +564,13 @@ For each interaction recipe:
 - Document data dependencies between pages
 
 ### Phase 8: Spec Documentation
-For each page/section, create a spec file following the template at `templates/section-spec.md`.
+**You should already have a partially written spec on disk by this point** — the Incremental Checkpointing Protocol requires writing after each CRUD action, not waiting until the end. This phase is about ensuring completeness of the final spec, not about first-time writing.
+
+For each page/section, the spec file must follow the template at `templates/section-spec.md`.
 
 **CRITICAL: The Interaction Recipes section is the most important deliverable.** Every interaction you performed during Phases 3-6 must be captured as a recipe. A spec without recipes is incomplete — the test-writer cannot work from it.
+
+**Before marking a section as done**, re-read the spec from disk and verify that every template section is filled in — not just the ones from the last action you explored. If any template section is still a placeholder, fill it now from your exploration data.
 
 Each recipe must include (using the format from the template):
 - **Locator**: the exact locator expression you used and tested
@@ -610,32 +664,36 @@ URL: /Admin/Settings/Roles
 ```
 
 ### State Updates
-After completing each section, update:
-- `src/docs/{module}/{page}/spec.md` with section completion status
-- `src/docs/STATE.md` with overall progress
+After completing each CRUD action checkpoint for a section, update:
+- The section's `spec.md` with everything discovered about that action (create or update the file)
+- `src/docs/STATE.md` with overall progress after the **last** action of a section is written (not after every action — only after a section is fully complete)
 
 ## Rules
 1. NEVER skip a section — document everything you find
-2. Always capture network requests during CRUD operations — **set up request interception BEFORE each mutation and record the endpoint, method, payload shape, and response shape in the spec**. This is the architect's only source of truth for API helper design.
-3. If authentication is required, use credentials from `.ouroboros/config.json`
-4. If you discover a cross-page relationship, immediately document it in `src/docs/DOMAIN-TREE.md`
-5. Be systematic: go left-to-right, top-to-bottom through the page
-6. For forms, try both valid and invalid data to understand validation
-7. Document loading states, empty states, and error states
-8. **NEVER write generic terms like "toast" or "success message"** — always identify the EXACT CSS class and/or ARIA role of every feedback element by evaluating the DOM while the message is visible.
-9. **EVERY dropdown/select must have its locator strategy proven** — open the dropdown, check what ARIA roles exist on the options, check what text they contain, and document the working locator.
-10. **EVERY modal/form must have ALL close mechanisms documented** — try Save, Cancel, X icon, Escape key, and backdrop click. For backdrop click, dispatch a click event on the actual mask/backdrop element (found via DOM ancestry audit) — do NOT test by clicking elsewhere on the page surface. Document which ones exist and which ones don't.
-11. **EVERY element outside the viewport must have its interaction method proven** — if standard click doesn't work, document exactly what does, including the measured position that proves it's outside viewport.
-12. **When an interaction fails, investigate WHY** — check dimensions (getBoundingClientRect), position relative to viewport, ARIA attributes, event handling, and cursor style. Document both the failure reason with evidence and the working alternative as a recipe.
-13. **EVERY mutation (create/update/delete) must have DOM diffs** — capture grid state (pagination, filters, row count, alert text) before AND after the mutation. Document every change in the Mutation Side Effects table.
-14. **EVERY mutation must have its network request captured** — use request interception to record the API endpoint, HTTP method, request payload field names, and response structure. Document these in the spec's API section. If the API expects different field names than the form labels (e.g., a UUID instead of a display name), document the mapping explicitly.
-15. **Form field validation must be exhaustive** — for each field, test: empty submission, invalid format (bad email, short password, mismatch), boundary values. Capture every distinct validation message and its exact CSS selector.
-16. **EVERY grid must have measured row/cell dimensions** — run getBoundingClientRect() on `[role="row"]` and `[role="gridcell"]`. If rows have 0 height, document that `toBeVisible()` will fail on rows. This is the #1 cause of test failures.
-17. **EVERY grid with pagination must document where new records appear** — after creating a record, navigate ALL pages. Document the sort order, which page the record lands on, and whether the grid auto-navigates there. Never write just "grid reloads."
-18. **Count and document EVERY distinct grid on the page separately** — if a page has 2+ grids, each is its own section with its own columns, actions, pagination, and CRUD capabilities. Missing a grid is a critical gap.
-19. **EVERY input field must have its fill method verified** — try standard `.fill()` and then check the value stuck. If the framework ignores Playwright's events, try the native value setter approach and document which method works.
-20. **EVERY recipe must include an Assert field** — the exact Playwright assertion a test would use to verify the interaction succeeded. If the obvious assertion would fail (e.g., toBeVisible on zero-height rows), document the working alternative.
-21. **NEVER write "Not fully explored" or "Requires follow-up"** — if you haven't proven something, go back and explore it now. An incomplete spec gives the test-writer false confidence and causes failures.
-22. **NEVER classify a container as "inline panel" just because standard dialog selectors don't match** — always perform the DOM Ancestry Audit (Phase 3d) to identify the actual container class, position style, and backdrop presence. A custom modal with no `role="dialog"` is still a modal if it has a backdrop mask and centered positioning.
-23. **EVERY conditionally rendered element must document its render condition** — if an element only appears after a user action (toggle, select, hover, expand), document the exact trigger action and disappear condition. An element documented without its render condition will cause the verifier and test-writer to fail immediately because they will expect it to exist on page load.
-24. **When multiple instances of the same component type exist in a section** (e.g., multiple dropdowns, multiple action icon sets), document how to disambiguate them — use parent container IDs, labels, heading context, or DOM position. A recipe that says "click the dropdown" when there are 3 dropdowns is ambiguous and will cause downstream failures.
+2. **WRITE AFTER EVERY ACTION — not after all actions.** After fully exploring one CRUD action (e.g., CREATE) for a section, immediately write or update the section's spec file on disk with everything you discovered about that action. Do NOT accumulate discoveries across multiple actions before writing. If context compaction occurs mid-exploration, previously written data survives on disk; unwritten data is lost forever. See the **Incremental Checkpointing Protocol** above for the exact checkpoint boundaries.
+3. **ANALYSIS PARALYSIS GUARD — if you have made 12+ consecutive browser observation calls (snapshot, evaluate, screenshot) without writing to a spec file on disk, STOP exploring and write what you have discovered so far.** You can always re-read the written spec and continue exploring from where you left off. Unwritten discoveries are lost to context compaction; written specs persist.
+4. **AFTER CONTEXT COMPACTION — re-read your instructions and the current spec.** When you detect that context has been compacted (your earlier exploration steps are no longer in the conversation), immediately execute the **Compaction Recovery Protocol**: re-read this agent file, the current spec, and STATE.md before continuing exploration. Do NOT rely on memory of what the instructions or previous discoveries said.
+5. **CROSS-ACTION UPDATES — if a later action reveals data about an earlier action, update it.** When exploring UPDATE you may discover that CREATE's filter preservation claim was wrong, or when exploring DELETE you may capture a feedback message format that applies to CREATE too. Read the existing spec, update the affected rows/sections, and write back to disk immediately.
+6. Always capture network requests during CRUD operations — **set up request interception BEFORE each mutation and record the endpoint, method, payload shape, and response shape in the spec**. This is the architect's only source of truth for API helper design.
+7. If authentication is required, use credentials from `.ouroboros/config.json`
+8. If you discover a cross-page relationship, immediately document it in `src/docs/DOMAIN-TREE.md`
+9. Be systematic: go left-to-right, top-to-bottom through the page
+10. For forms, try both valid and invalid data to understand validation
+11. Document loading states, empty states, and error states
+12. **NEVER write generic terms like "toast" or "success message"** — always identify the EXACT CSS class and/or ARIA role of every feedback element by evaluating the DOM while the message is visible.
+13. **EVERY dropdown/select must have its locator strategy proven** — open the dropdown, check what ARIA roles exist on the options, check what text they contain, and document the working locator.
+14. **EVERY modal/form must have ALL close mechanisms documented** — try Save, Cancel, X icon, Escape key, and backdrop click. For backdrop click, dispatch a click event on the actual mask/backdrop element (found via DOM ancestry audit) — do NOT test by clicking elsewhere on the page surface. Document which ones exist and which ones don't.
+15. **EVERY element outside the viewport must have its interaction method proven** — if standard click doesn't work, document exactly what does, including the measured position that proves it's outside viewport.
+16. **When an interaction fails, investigate WHY** — check dimensions (getBoundingClientRect), position relative to viewport, ARIA attributes, event handling, and cursor style. Document both the failure reason with evidence and the working alternative as a recipe.
+17. **EVERY mutation (create/update/delete) must have DOM diffs** — capture grid state (pagination, filters, row count, alert text) before AND after the mutation. Document every change in the Mutation Side Effects table.
+18. **EVERY mutation must have its network request captured** — use request interception to record the API endpoint, HTTP method, request payload field names, and response structure. Document these in the spec's API section. If the API expects different field names than the form labels (e.g., a UUID instead of a display name), document the mapping explicitly.
+19. **Form field validation must be exhaustive** — for each field, test: empty submission, invalid format (bad email, short password, mismatch), boundary values. Capture every distinct validation message and its exact CSS selector.
+20. **EVERY grid must have measured row/cell dimensions** — run getBoundingClientRect() on `[role="row"]` and `[role="gridcell"]`. If rows have 0 height, document that `toBeVisible()` will fail on rows. This is the #1 cause of test failures.
+21. **EVERY grid with pagination must document where new records appear** — after creating a record, navigate ALL pages. Document the sort order, which page the record lands on, and whether the grid auto-navigates there. Never write just "grid reloads."
+22. **Count and document EVERY distinct grid on the page separately** — if a page has 2+ grids, each is its own section with its own columns, actions, pagination, and CRUD capabilities. Missing a grid is a critical gap.
+23. **EVERY input field must have its fill method verified** — try standard `.fill()` and then check the value stuck. If the framework ignores Playwright's events, try the native value setter approach and document which method works.
+24. **EVERY recipe must include an Assert field** — the exact Playwright assertion a test would use to verify the interaction succeeded. If the obvious assertion would fail (e.g., toBeVisible on zero-height rows), document the working alternative.
+25. **NEVER write "Not fully explored" or "Requires follow-up"** — if you haven't proven something, go back and explore it now. An incomplete spec gives the test-writer false confidence and causes failures.
+26. **NEVER classify a container as "inline panel" just because standard dialog selectors don't match** — always perform the DOM Ancestry Audit (Phase 3d) to identify the actual container class, position style, and backdrop presence. A custom modal with no `role="dialog"` is still a modal if it has a backdrop mask and centered positioning.
+27. **EVERY conditionally rendered element must document its render condition** — if an element only appears after a user action (toggle, select, hover, expand), document the exact trigger action and disappear condition. An element documented without its render condition will cause the verifier and test-writer to fail immediately because they will expect it to exist on page load.
+28. **When multiple instances of the same component type exist in a section** (e.g., multiple dropdowns, multiple action icon sets), document how to disambiguate them — use parent container IDs, labels, heading context, or DOM position. A recipe that says "click the dropdown" when there are 3 dropdowns is ambiguous and will cause downstream failures.

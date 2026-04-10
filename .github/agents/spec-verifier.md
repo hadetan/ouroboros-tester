@@ -160,33 +160,13 @@ If `## UI Framework & Component Details` is empty or missing:
 4. Add all findings to the spec
 
 ### Step A2: Container Type Verification (MANDATORY for all forms/dialogs)
-The explorer may have misidentified HOW a form is displayed (e.g., called a modal an "inline panel" or vice versa). Re-verify:
+The explorer may have misidentified a container type. Re-verify by performing a DOM ancestry audit (traverse from a known child element upward through parents to identify the actual container class, positioning, and backdrop presence).
 
-1. **Trigger the form/dialog open action** (e.g., click the create/edit button)
-2. **Perform a DOM Ancestry Audit**: Starting from a known child element inside the form (e.g., the first input field), traverse upward through parent elements using JavaScript:
-   ```javascript
-   // Start from a known child inside the form, walk up the tree
-   let el = document.querySelector('input[id*="name"], input[id*="Name"], form input');
-   const chain = [];
-   while (el && el !== document.body) {
-     chain.push({ tag: el.tagName, class: el.className, role: el.getAttribute('role') });
-     el = el.parentElement;
-   }
-   JSON.stringify(chain, null, 2);
-   ```
-3. **Classify the container** based on what the ancestry chain reveals:
-   - Standard modal: `[role="dialog"]` or framework modal class (e.g., `.{framework}-modal`)
-   - Custom/third-party modal: Application-specific class names wrapping the form in a positioned overlay
-   - Drawer: Side-sliding panel with overlay/mask
-   - Inline panel: Form appears inline within the page content, no overlay, no mask
-   - Popover/dropdown: Small positioned element attached to trigger
-4. **If the spec says "inline panel" but the ancestry shows an overlay/mask/positioned container** → this is a CRITICAL correction. Update the spec.
-5. **Test ALL close mechanisms** by targeting the actual DOM elements:
-   - Cancel button (locate and click)
-   - X/close icon (locate and click)
-   - Escape key (`page.keyboard.press('Escape')`)
-   - Backdrop/mask click: If an overlay/mask element exists in the DOM, dispatch a click directly on that element. Do NOT test backdrop close by clicking on a random area of the page.
-6. **Compare the explorer's classification** with your findings. If they differ, update the spec and mark as `corrected: true` with a note explaining the actual container type and ancestry chain.
+1. **Trigger the form/dialog open action**
+2. **Perform a DOM Ancestry Audit**: Walk from the first input upward through `parentElement`, recording tag, class, role, and id at each level. From the chain, identify the outermost positioned wrapper and any backdrop/mask sibling.
+3. **Classify the container**: standard modal (`role="dialog"`), custom modal (positioned overlay without ARIA), drawer, inline panel, or popover.
+4. **If the spec says "inline panel" but the ancestry shows an overlay/mask** → CRITICAL correction. Update the spec.
+5. **Test ALL close mechanisms** (Cancel button, X icon, Escape key, backdrop/mask click via `dispatchEvent`). Compare with the explorer's classification and correct if different.
 
 ### Step B: Layout Audit
 If `### Layout Constraints` is empty or says "default viewport is fine":
@@ -221,42 +201,15 @@ This is the #1 cause of test failures. Some grid frameworks render `[role="row"]
 5. **Test the Playwright accessibility snapshot** — Take a snapshot. Verify all documented grids appear. Verify row text matches what the spec says.
 
 ### Step E2: Conditional Rendering Verification (MANDATORY)
-Elements that are conditionally rendered (only appear in the DOM after a specific user action) are a major source of verification confusion. When you cannot find a documented element, do NOT immediately mark it as missing — investigate whether it requires a trigger.
+When a documented element is NOT found in the DOM, investigate whether it requires a trigger before declaring it missing.
 
-**Protocol when a documented element is NOT found in the DOM:**
-
-1. **Check the spec for render condition metadata.** Look for:
-   - "Render Condition" or "Trigger Action" fields in the element's Interaction Recipe
-   - Notes about the element appearing "after" some action (toggle, select, expand, hover, edit)
-   - Keywords like "lazy", "conditional", "appears when", "only visible after"
-
-2. **If the spec documents a trigger condition:**
-   - Perform the documented trigger action
-   - Wait briefly for the DOM to update
-   - Re-check for the element
-   - If found after the trigger: ✅ **Confirmed** — the conditional rendering is correctly documented
-   - If NOT found after the trigger: ⚠️ **Corrected** — investigate the actual trigger and update the spec
-
-3. **If the spec does NOT document a trigger condition** but the element is missing:
-   - Before declaring the element absent, perform common trigger actions in the section:
-     a. Expand any collapsed/accordion panels
-     b. Toggle a checkbox or radio button if present
-     c. Select a different option in a dropdown if present
-     d. Click/hover on a grid row if applicable
-   - After each action, re-check for the element
-   - If the element appears after one of these actions: this is a **CRITICAL spec correction** — add the Render Condition, Render Behavior, Trigger Action, and Disappear Condition to the recipe and mark `corrected: true`
-
-4. **Verify Render Behavior classification** (if the spec documents it):
-   - **`state-bound`**: Undo the trigger action. The element MUST disappear. Redo it — the element MUST reappear. If the element persists after undoing the trigger, the classification is wrong — correct it to `once-triggered`.
-   - **`once-triggered`**: Undo the trigger action. The element should still be present. Then call `navigate()` to reload the page fresh. The element should be ABSENT on the fresh page (requiring the trigger again). If the element is present on fresh load, the classification is wrong — the element is actually always-present (possibly lazy-loaded) and should be reclassified.
-   - **No Render Behavior documented** but the element has a Render Condition: this is a gap. Perform the undo-trigger test above to classify it and add the field.
-
-5. **After verifying a conditionally rendered element:**
-   - Verify the element's full Element Proof Protocol data (dimensions, ARIA, locator) while it's present in the DOM
-   - Verify the Disappear Condition if documented (perform the documented reset action and confirm the element vanishes)
-   - Verify the element behaves correctly
-
-**Why this step exists:** Without this protocol, the test writer will not know about the conditional rendering element and will stumble upon it on execution errors and go in a cycle of researching about it and fixing it.
+1. **Check the spec for render condition metadata** — look for "Render Condition", "Trigger Action", or "Render Behavior" fields in the recipe.
+2. **If the spec documents a trigger**: perform it, wait for DOM update, re-check. Confirmed if found; corrected if trigger is wrong.
+3. **If no trigger documented but element missing**: try common triggers (expand panels, toggle checkboxes, select options, click/hover rows). If element appears, add the Render Condition to the recipe — this is a CRITICAL spec correction.
+4. **Verify Render Behavior classification**:
+   - `state-bound`: undo trigger → element must disappear; redo → must reappear. If it persists, reclassify as `once-triggered`.
+   - `once-triggered`: undo trigger → element persists; `navigate()` fresh page → element absent. If present on fresh load, reclassify as always-present.
+5. **After verifying**: confirm Element Proof Protocol data (dimensions, ARIA, locator) while the element is present.
 
 ### Step F: Post-Mutation Pagination Audit (for grids with pagination)
 1. Create a record via the UI.
@@ -268,36 +221,18 @@ Elements that are conditionally rendered (only appear in the DOM after a specifi
 4. If the spec says "grid reloads" without specifying WHERE the record appears, this is a **verification failure** — the test-writer needs this information to write correct assertions.
 
 ### Step G: Network Request Data Completeness (MANDATORY for sections with CRUD)
-The test-architect relies on the spec's API details to build helpers and data factories. Incomplete or missing network data forces the architect to guess — which causes downstream failures.
+The test-architect relies on the spec's API details. Incomplete network data forces downstream guessing.
 
-1. **Inject the network capture snippet** before re-executing CRUD operations:
+1. **Verify API contracts** using the probe tool:
    ```bash
-   node scripts/api-probe.mjs intercept-snippet --json
+   node scripts/api-probe.mjs verify-contract --spec src/docs/{module}/{page}/sections/{section}/spec.md --json
    ```
-   Inject the returned snippet via `browser_evaluate` BEFORE the operation, then read `window.__apiCaptures` after.
+   Fix any mismatches between documented and actual API responses.
 
-2. **Alternatively, verify API contracts directly** using the probe tool:
-   ```bash
-   # Verify a GET endpoint returns expected shape
-   node scripts/api-probe.mjs probe GET /api/v1/{resource} --json
-
-   # Verify a POST endpoint accepts the documented payload
-   node scripts/api-probe.mjs probe POST /api/v1/{resource} --data '{"field":"value"}' --json
-   ```
-   The probe returns: request details, response status, response body shape (TypeScript-like), field inventory (dot-path notation), and auth mechanism used.
-
-3. **Verify the spec documents the following for each mutation:**
-   - Endpoint URL and HTTP method
-   - Request payload **field names exactly as the API expects them** (camelCase vs PascalCase, UUIDs vs display names)
-   - Response payload shape (what the API returns on success)
-   - Auth mechanism used (Bearer token from header? Cookie? How is the token obtained?)
-4. **If the spec's API section is empty, incomplete, or says "Not captured"** → this is a CRITICAL gap. Capture the data now and add it to the spec.
-5. **Cross-reference API field names with form field labels** — the API may use different names than what appears in the UI (e.g., the UI shows "something" dropdown but the API expects `somethingId` as a UUID). Document these mappings explicitly.
-6. **Verify auth mechanism** using the extract-auth command:
-   ```bash
-   node scripts/api-probe.mjs extract-auth --json
-   ```
-   This reports: token source (localStorage, sessionStorage, cookies), key name, header format, and Playwright usage notes. Verify these match what the spec documents.
+2. **Verify the spec documents for each mutation:** endpoint URL, HTTP method, request payload field names (exact casing), response shape, and auth mechanism.
+3. **If the spec's API section is empty or says "Not captured"** → CRITICAL gap. Re-inject the network capture snippet (via `api-probe intercept-snippet`), re-execute the CRUD operation, and capture the data.
+4. **Cross-reference API field names with form labels** — document mappings where UI labels differ from API field names.
+5. **Verify auth mechanism** via `node scripts/api-probe.mjs extract-auth --json`.
 
 ## Output
 - Updated section specs with verification status (especially updated Interaction Recipes)

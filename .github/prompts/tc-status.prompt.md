@@ -1,42 +1,13 @@
 ---
-description: "Show the current status of domain exploration, spec verification, and test writing"
-argument-hint: "[--page <page-slug>]"
-agent: "agent"
+mode: agent
+description: "Show the current status dashboard for domain exploration, spec verification, and test writing."
 ---
 
-# Ouroboros Tester Status
+**Arguments:** $input
+**Parse:** `[--page <page-slug>]`
 
-## Objective
-Display a dashboard showing the progress of exploration, verification, and test writing across all pages and sections.
+## Context
+Read `.github/workflows/status.md` for the dashboard workflow.
 
-## Process
-
-1. Read `src/docs/STATE.md`
-2. Read all page specs from `src/docs/`
-3. Read `src/docs/DOMAIN-TREE.md` for relationship status
-
-### Display Format
-
-```
-Ouroboros Tester Dashboard
-══════════════════════════════════════════════════
-
-Domain: {project-name} ({base-url})
-
-Pages:
-  ● inventory-management  ████████████░░░░  75%  [3/4 sections explored, 2 verified, 1 tested]
-  ● dashboard             ██████░░░░░░░░░░  37%  [2/3 sections explored, 1 verified, 0 tested]
-  ○ settings              ░░░░░░░░░░░░░░░░   0%  [not started]
-
-Relationships:
-  ✓ inventory-management/create-form → dashboard/recent-activity
-  ○ settings/roles → inventory-management/create-form (unverified)
-
-Test Infrastructure: ✓ Set up
-Tests: 12 written, 10 passing, 2 failing
-
-Next Steps:
-  → /tc-explore https://app.example.com/settings --name "Settings"
-  → /tc-verify dashboard
-  → /tc-write-tests inventory-management --section item-list
-```
+## Execute
+Follow the `status` workflow from `.github/workflows/status.md` using the parsed arguments above.

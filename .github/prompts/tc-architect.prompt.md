@@ -1,21 +1,18 @@
 ---
-description: "Set up Playwright test project infrastructure from verified specs"
-argument-hint: "[--force]"
-agent: "test-architect"
+mode: agent
+description: "Set up Playwright test project infrastructure from verified specs. Creates POMs, fixtures, helpers."
 ---
 
-# Setup Test Architecture
+**Arguments:** $input
+**Parse:** `[--force]`
 
-## Objective
-Analyze all verified specs and create a production-ready Playwright test project with proper architecture, POM pattern, fixtures, and reusable components.
+## Context
+Before taking any action, read these files:
+1. `.github/agents/test-architect.md` — full agent protocol
+2. `.github/workflows/setup-tests.md` — workflow steps to execute
+3. `.ouroboros/config.json` — domain context
+4. All verified specs from `src/docs/`
+5. All existing framework files in `src/base/`, `src/components/`, `src/fixtures/`, `src/helpers/`, `src/utils/`
 
-## Process
-
-1. Read all verified specs from `src/docs/`
-2. Analyze common patterns across pages
-3. Execute the setup-tests workflow
-4. Report created files and detected patterns
-
-## Execution Context
-- Workflow: [setup-tests](../workflows/setup-tests.md)
-- Agent: [test-architect](../agents/test-architect.md)
+## Execute
+Follow the `setup-tests` workflow from `.github/workflows/setup-tests.md` end-to-end, guided by the agent protocol from `.github/agents/test-architect.md`, using the parsed arguments above.

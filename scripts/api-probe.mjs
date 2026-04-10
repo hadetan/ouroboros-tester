@@ -922,6 +922,7 @@ function cmdInterceptSnippet() {
  *
  * Usage:
  *   node scripts/api-probe.mjs run --code 'async (page) => await page.title()'
+ *   node scripts/api-probe.mjs run --file path/to/script.js [--url ...]
  *   node scripts/api-probe.mjs run --code 'async (page) => { await page.goto("https://app.example.com/users"); return await page.locator("[role=grid]").count(); }'
  *   node scripts/api-probe.mjs run --code 'async (page, request) => { const r = await request.get("/api/v1/users"); return (await r.json()).data.length; }'
  *   node scripts/api-probe.mjs run --url https://example.com/page --code 'async (page) => ...'
@@ -931,6 +932,7 @@ function cmdInterceptSnippet() {
  *
  * Flags:
  *   --code <js>   The async function body (receives page, request)
+ *   --file <path> Path to a .js file exporting an async function (receives page, request)
  *   --url <url>   Optional URL to navigate to before running the code
  */
 async function cmdRun() {
@@ -941,11 +943,22 @@ async function cmdRun() {
   }
 
   const code = getFlagValue('--code');
-  if (!code) {
+  const filePath = getFlagValue('--file');
+  if (!code && !filePath) {
     output('error', 'run', null, [
-      'Missing --code flag. Usage: node scripts/api-probe.mjs run --code \'async (page) => ...\'',
+      'Missing --code or --file flag. Usage: node scripts/api-probe.mjs run --code \'async (page) => ...\' OR --file path/to/script.js',
     ]);
     return;
+  }
+
+  let codeToRun = code;
+  if (filePath) {
+    const absPath = resolve(filePath);
+    if (!existsSync(absPath)) {
+      output('error', 'run', null, [`File not found: ${absPath}`]);
+      return;
+    }
+    codeToRun = readFileSync(absPath, 'utf-8');
   }
 
   const navigateUrl = getFlagValue('--url');
@@ -1012,7 +1025,7 @@ async function cmdRun() {
 
     // Build and execute the user function
     // Security: only accept function expressions, not arbitrary statements
-    const fn = new Function('page', 'request', `return (${code})(page, request);`);
+    const fn = new Function('page', 'request', `return (${codeToRun})(page, request);`);
     const result = await fn(page, requestHelper);
 
     await browser.close();

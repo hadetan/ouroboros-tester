@@ -34,6 +34,19 @@ You are working in the Ouroboros Tester project — an AI-driven domain test aut
 - `scripts/validate-spec.mjs` — Spec completeness validation (quality gate for explorer/verifier)
 - `scripts/validate-architecture.mjs` — Architecture validation (quality gate for architect)
 
+## File Structure Convention
+
+Commands are thin wrappers — all logic lives in shared files:
+
+| Path | Purpose | Used By |
+|------|---------|---------|
+| `.github/workflows/*.md` | Workflow steps — **source of truth** | Claude + Copilot |
+| `.github/agents/*.md` | Agent protocols — **source of truth** | Claude + Copilot |
+| `.claude/commands/tc-*.md` | Claude Code slash commands | Claude Code only |
+| `.github/prompts/tc-*.prompt.md` | Copilot slash commands | GitHub Copilot only |
+
+**To update a command**: edit only the workflow/agent file in `.github/`. Both Claude and Copilot commands reference the same shared files — never duplicate workflow logic into command files.
+
 ## Conventions
 
 1. **Specs use Given/When/Then scenarios** — Every requirement has testable scenarios
