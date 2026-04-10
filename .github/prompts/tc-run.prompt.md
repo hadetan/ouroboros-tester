@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: "Execute the full pipeline: explore, verify, architect, and write-tests for a page."
 ---
 

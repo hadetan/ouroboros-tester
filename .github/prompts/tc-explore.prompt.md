@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: "Explore a page of the target website, discover sections, and document CRUD operations"
 ---
 

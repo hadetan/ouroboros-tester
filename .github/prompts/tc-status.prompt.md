@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: "Show the current status dashboard for domain exploration, spec verification, and test writing."
 ---
 

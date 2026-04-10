@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: "Verify the accuracy of specs produced by the explorer agent. Re-crawls and fixes inaccuracies."
 ---
 

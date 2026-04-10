@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: "Write Playwright test cases from verified specs using the established test architecture."
 ---
 
