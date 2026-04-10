@@ -6,13 +6,13 @@ You are working in the Ouroboros Tester project — an AI-driven domain test aut
 
 | Command | Purpose |
 |---------|---------|
-| `/tc-init <url>` | Initialize project for a domain |
-| `/tc-explore <url> --name "<name>"` | Explore a page and document sections |
-| `/tc-verify <page-slug>` | Verify spec accuracy for a page |
-| `/tc-architect` | Set up Playwright test infrastructure |
-| `/tc-write-tests <page-slug>` | Write tests from verified specs |
-| `/tc-status` | Show progress dashboard |
-| `/tc-run <url> --name "<name>"` | Full pipeline for a page |
+| `/orb-init <url>` | Initialize project for a domain |
+| `/orb-explore <url> --name "<name>"` | Explore a page and document sections |
+| `/orb-verify <page-slug>` | Verify spec accuracy for a page |
+| `/orb-architect` | Set up Playwright test infrastructure |
+| `/orb-write-tests <page-slug>` | Write tests from verified specs |
+| `/orb-status` | Show progress dashboard |
+| `/orb-run <url> --name "<name>"` | Full pipeline for a page |
 
 ## Key Files
 
@@ -42,8 +42,8 @@ Commands are thin wrappers — all logic lives in shared files:
 |------|---------|---------|
 | `.github/workflows/*.md` | Workflow steps — **source of truth** | Claude + Copilot |
 | `.github/agents/*.md` | Agent protocols — **source of truth** | Claude + Copilot |
-| `.claude/commands/tc-*.md` | Claude Code slash commands | Claude Code only |
-| `.github/prompts/tc-*.prompt.md` | Copilot slash commands | GitHub Copilot only |
+| `.claude/commands/orb-*.md` | Claude Code slash commands | Claude Code only |
+| `.github/prompts/orb-*.prompt.md` | Copilot slash commands | GitHub Copilot only |
 
 **To update a command**: edit only the workflow/agent file in `.github/`. Both Claude and Copilot commands reference the same shared files — never duplicate workflow logic into command files.
 

@@ -1,4 +1,4 @@
-# TestCraft State
+# Ouroboros Tester State
 
 ## Project
 - **Name:** (not initialized)

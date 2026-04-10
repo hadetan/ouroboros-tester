@@ -179,7 +179,7 @@ Config loading is handled by `src/utils/config.ts`. All files (`auth.setup.ts`, 
 ### Rule F: DataFactory Must Match Spec Validation Rules
 The data factory is in `src/helpers/data-factory.ts` and contains both base utilities and domain-specific generators.
 Read EVERY field's validation rules from the spec's `## Form Fields` table. The factory must generate data that passes ALL validation — not just required. For example:
-- If the spec says email must have a valid TLD, use `@example.com` not `@testcraft.local`
+- If the spec says email must have a valid TLD, use `@example.com` not `@ouroboros.local`
 - If the spec says password needs special chars, include them
 - The `uniqueEmail()` helper must ALSO use the correct domain, not just the `user()` factory
 

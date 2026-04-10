@@ -1,6 +1,7 @@
 ---
-agent: agent
 description: "Execute the full pipeline: explore, verify, architect, and write-tests for a page."
+argument-hint: "<page-url> --name \"<page-name>\" [--auth]"
+agent: "crawl-explorer"
 ---
 
 **Arguments:** $input

@@ -9,7 +9,7 @@ tools: mcp__playwright__*, Read, Write, Edit, Bash, Glob, Grep
 Before taking any action, read:
 1. `.github/agents/test-writer.md` — full agent protocol (architecture contract loading, spec extraction, Failure Diagnosis Protocol, rules 1–27)
 2. `.github/workflows/write-tests.md` — workflow steps to execute
-3. `.ouroboros/architect-manifest.md` — **if this does not exist, STOP and tell the user to run `/tc-architect` first**
+3. `.ouroboros/architect-manifest.md` — **if this does not exist, STOP and tell the user to run `/orb-architect` first**
 4. All architecture files listed in the manifest
 
 ## Execute

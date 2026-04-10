@@ -44,13 +44,13 @@ node scripts/api-probe.mjs verify-contract src/docs/.../spec.md
 The project uses slash commands to invoke agents in sequence:
 
 ```
-/tc-init <base-url>                          → Initialize config and state files
-/tc-explore <url> --name "<name>" [--auth]   → crawl-explorer agent → writes specs to src/docs/
-/tc-verify <page-slug> [--section <slug>]    → spec-verifier agent → verifies specs are accurate
-/tc-architect [--force]                      → test-architect agent → generates POM/fixtures/helpers
-/tc-write-tests <page-slug>                  → test-writer agent → writes test cases to src/tests/
-/tc-run <url> --name "<name>"                → Full pipeline in sequence
-/tc-status [--page <slug>]                   → Show progress dashboard
+/orb-init <base-url>                          → Initialize config and state files
+/orb-explore <url> --name "<name>" [--auth]   → crawl-explorer agent → writes specs to src/docs/
+/orb-verify <page-slug> [--section <slug>]    → spec-verifier agent → verifies specs are accurate
+/orb-architect [--force]                      → test-architect agent → generates POM/fixtures/helpers
+/orb-write-tests <page-slug>                  → test-writer agent → writes test cases to src/tests/
+/orb-run <url> --name "<name>"                → Full pipeline in sequence
+/orb-status [--page <slug>]                   → Show progress dashboard
 ```
 
 Agents are defined in `.github/agents/`, prompts in `.github/prompts/`, workflows in `.github/workflows/`.
@@ -63,8 +63,8 @@ Commands are thin wrappers — all logic lives in shared files:
 |------|---------|---------|
 | `.github/workflows/*.md` | Workflow steps — **source of truth** | Claude + Copilot |
 | `.github/agents/*.md` | Agent protocols — **source of truth** | Claude + Copilot |
-| `.claude/commands/tc-*.md` | Claude Code slash commands | Claude Code only |
-| `.github/prompts/tc-*.prompt.md` | Copilot slash commands | GitHub Copilot only |
+| `.claude/commands/orb-*.md` | Claude Code slash commands | Claude Code only |
+| `.github/prompts/orb-*.prompt.md` | Copilot slash commands | GitHub Copilot only |
 
 **Rule:** To update a command's behavior, edit only the shared workflow or agent file. Never duplicate workflow logic into command files. Both the Claude command and the Copilot prompt are thin wrappers that say "read + execute these shared files."
 

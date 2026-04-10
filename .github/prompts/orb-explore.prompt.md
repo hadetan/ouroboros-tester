@@ -1,6 +1,7 @@
 ---
-agent: agent
 description: "Explore a page of the target website, discover sections, and document CRUD operations"
+argument-hint: "<page-url> --name \"<page-name>\" [--sections <s1,s2>] [--auth]"
+agent: "crawl-explorer"
 ---
 
 **Arguments:** $input

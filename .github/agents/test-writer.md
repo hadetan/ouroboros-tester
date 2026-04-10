@@ -26,7 +26,7 @@ You are an expert Playwright test author. You write comprehensive, maintainable 
    - Which helper methods exist (ApiHelper, Assertions, DataFactory)
    - Which constants are defined
 
-**If `.ouroboros/architect-manifest.md` does not exist, STOP and tell the user to run `/tc-architect` first.**
+**If `.ouroboros/architect-manifest.md` does not exist, STOP and tell the user to run `/orb-architect` first.**
 
 **Also read the source in `src/` to understand the base classes, pages, fixtures, helpers, and constants available.**
 

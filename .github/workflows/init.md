@@ -69,7 +69,7 @@ Write initial `src/docs/DOMAIN-TREE.md`:
 
 ## Entity Relationships
 
-No relationships documented yet. Run `/tc-explore` to start.
+No relationships documented yet. Run `/orb-explore` to start.
 ```
 </step>
 
@@ -79,5 +79,5 @@ Ensure `.ouroboros/config.json` and `playwright/.auth/` are in `.gitignore`.
 
 <step name="report">
 Confirm initialization is complete and suggest the next step:
-→ `/tc-explore <first-page-url> --name "<Page Name>" --auth`
+→ `/orb-explore <first-page-url> --name "<Page Name>" --auth`
 </step>

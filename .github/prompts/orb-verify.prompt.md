@@ -1,6 +1,7 @@
 ---
-agent: agent
 description: "Verify the accuracy of specs produced by the explorer agent. Re-crawls and fixes inaccuracies."
+argument-hint: "<page-slug> [--section <section-slug>] [--auth]"
+agent: "spec-verifier"
 ---
 
 **Arguments:** $input

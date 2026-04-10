@@ -42,7 +42,7 @@ Relationships:
   ✓ {source-page}/{section} → {target-page}/{section}
   ○ {unverified relationship}
 
-Test Infrastructure: ✓ Set up  (or: ✗ Not set up — run /tc-architect)
+Test Infrastructure: ✓ Set up  (or: ✗ Not set up — run /orb-architect)
 Tests: {n} written, {n} passing, {n} failing
 
 Next Steps:

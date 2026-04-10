@@ -11,7 +11,7 @@ agents:
 Navigate to a target page, discover all sections, understand CRUD operations, and produce structured specs.
 
 ## Prerequisites
-- `.ouroboros/config.json` must exist (run `/tc-init` first)
+- `.ouroboros/config.json` must exist (run `/orb-init` first)
 - Browser MCP connection must be active
 
 ## Arguments

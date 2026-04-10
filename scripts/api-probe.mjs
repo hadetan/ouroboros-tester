@@ -373,7 +373,7 @@ async function cmdAuth() {
   const config = loadConfig();
   if (!config) {
     output('error', 'auth', null, [
-      'Config not found at .ouroboros/config.json — run /tc-init first',
+      'Config not found at .ouroboros/config.json — run /orb-init first',
     ]);
     return;
   }
@@ -439,7 +439,7 @@ async function cmdExtractAuth() {
   const config = loadConfig();
   if (!config) {
     output('error', 'extract-auth', null, [
-      'Config not found at .ouroboros/config.json — run /tc-init first',
+      'Config not found at .ouroboros/config.json — run /orb-init first',
     ]);
     return;
   }
@@ -496,7 +496,7 @@ async function cmdProbe() {
   const config = loadConfig();
   if (!config) {
     output('error', 'probe', null, [
-      'Config not found at .ouroboros/config.json — run /tc-init first',
+      'Config not found at .ouroboros/config.json — run /orb-init first',
     ]);
     return;
   }
@@ -619,7 +619,7 @@ async function cmdSmoke() {
   const config = loadConfig();
   if (!config) {
     output('error', 'smoke', null, [
-      'Config not found at .ouroboros/config.json — run /tc-init first',
+      'Config not found at .ouroboros/config.json — run /orb-init first',
     ]);
     return;
   }
@@ -938,7 +938,7 @@ function cmdInterceptSnippet() {
 async function cmdRun() {
   const config = loadConfig();
   if (!config) {
-    output('error', 'run', null, ['Config not found at .ouroboros/config.json — run /tc-init first']);
+    output('error', 'run', null, ['Config not found at .ouroboros/config.json — run /orb-init first']);
     return;
   }
 

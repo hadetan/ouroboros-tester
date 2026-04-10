@@ -57,13 +57,13 @@ Inspired by [GSD](https://github.com/coleam00/get-shit-done)'s agent orchestrati
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │                          USER                                  │
-│              /tc-init  /tc-explore  /tc-verify                 │
-│              /tc-architect  /tc-write-tests  /tc-run           │
+│              /orb-init  /orb-explore  /orb-verify                 │
+│              /orb-architect  /orb-write-tests  /orb-run           │
 └──────────────────────────┬─────────────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────────────┐
 │                    COMMAND LAYER                                │
-│            .github/prompts/tc-*.prompt.md                      │
+│            .github/prompts/orb-*.prompt.md                      │
 └──────────────────────────┬─────────────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────────────┐
@@ -88,11 +88,11 @@ Inspired by [GSD](https://github.com/coleam00/get-shit-done)'s agent orchestrati
 ### Agent Pipeline
 
 ```
-/tc-explore     →  crawl-explorer  →  Page & section specs (src/docs/)
-/tc-verify      →  spec-verifier   →  Verified specs (src/docs/)
-/tc-architect   →  test-architect  →  POM (src/pages/) + fixtures (src/fixtures/)
-/tc-write-tests →  test-writer     →  Test files (src/tests/{module}/{page}/)
-/tc-run         →  all above       →  Full pipeline
+/orb-explore     →  crawl-explorer  →  Page & section specs (src/docs/)
+/orb-verify      →  spec-verifier   →  Verified specs (src/docs/)
+/orb-architect   →  test-architect  →  POM (src/pages/) + fixtures (src/fixtures/)
+/orb-write-tests →  test-writer     →  Test files (src/tests/{module}/{page}/)
+/orb-run         →  all above       →  Full pipeline
 ```
 
 ### Key Patterns
@@ -104,7 +104,7 @@ Inspired by [GSD](https://github.com/coleam00/get-shit-done)'s agent orchestrati
 | Spec format | OpenSpec | Requirements + Given/When/Then scenarios |
 | Domain tree | OpenSpec | Cross-page entity relationship mapping |
 | Workflows | GSD | Multi-step orchestration in `.github/workflows/` |
-| Commands | GSD | User-facing entry points in `.github/prompts/tc-*.prompt.md` |
+| Commands | GSD | User-facing entry points in `.github/prompts/orb-*.prompt.md` |
 | Package exports | OpenSpec | `src/` builds to `dist/`, publishable as npm package |
 
 ### Test Architecture Patterns

@@ -144,7 +144,7 @@ function validate() {
   const info = [];
 
   if (!existsSync(MANIFEST_PATH)) {
-    failures.push('MISSING: .ouroboros/architect-manifest.md does not exist — run /tc-architect first');
+    failures.push('MISSING: .ouroboros/architect-manifest.md does not exist — run /orb-architect first');
     return { failures, warnings, info };
   }
   info.push('Manifest found: .ouroboros/architect-manifest.md');

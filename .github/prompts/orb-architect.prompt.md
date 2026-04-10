@@ -1,6 +1,7 @@
 ---
-agent: agent
 description: "Set up Playwright test project infrastructure from verified specs. Creates POMs, fixtures, helpers."
+argument-hint: "[--force]"
+agent: "test-architect"
 ---
 
 **Arguments:** $input

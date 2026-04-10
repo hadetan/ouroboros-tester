@@ -9,25 +9,25 @@
 Ouroboros Tester uses a pipeline of four specialized AI agents, each backed by a VS Code custom agent mode, to take a web application from zero to a fully covered Playwright test suite.
 
 ```
-/tc-init
+/orb-init
    └─▶ Sets up project config, templates, and state
 
-/tc-explore <url> --name "<page>"
+/orb-explore <url> --name "<page>"
    └─▶ crawl-explorer agent navigates the page
        Discovers every section and CRUD operation
        Writes structured specs to src/docs/
 
-/tc-verify <page-slug>
+/orb-verify <page-slug>
    └─▶ spec-verifier agent re-crawls the page
        Validates every documented claim against reality
        Marks specs as verified or corrects inaccuracies
 
-/tc-architect
+/orb-architect
    └─▶ test-architect agent reads all verified specs
        Generates POM, fixtures, components, helpers
        Creates the full test project structure in src/
 
-/tc-write-tests <page-slug>
+/orb-write-tests <page-slug>
    └─▶ test-writer agent reads verified specs + architecture
        Writes comprehensive CRUD test suites
        Runs tests and reports results
@@ -36,7 +36,7 @@ Ouroboros Tester uses a pipeline of four specialized AI agents, each backed by a
 Or run the full pipeline in one command:
 
 ```
-/tc-run <url> --name "<page>"
+/orb-run <url> --name "<page>"
 ```
 
 ---
@@ -77,7 +77,7 @@ npx playwright install chromium
 Type in VS Code chat:
 
 ```
-/tc-init
+/orb-init
 ```
 
 The agent will ask for your base URL, project name, authentication details, and optional API base URL. It creates `.ouroboros/config.json` and all required directories.
@@ -85,25 +85,25 @@ The agent will ask for your base URL, project name, authentication details, and 
 ### 3. Explore a page
 
 ```
-/tc-explore https://app.example.com/users --name "User Management"
+/orb-explore https://app.example.com/users --name "User Management"
 ```
 
 ### 4. Verify the specs
 
 ```
-/tc-verify user-management
+/orb-verify user-management
 ```
 
 ### 5. Generate the test infrastructure
 
 ```
-/tc-architect
+/orb-architect
 ```
 
 ### 6. Write tests
 
 ```
-/tc-write-tests user-management
+/orb-write-tests user-management
 ```
 
 ### Run the test suite
@@ -124,13 +124,13 @@ All commands appear as slash commands in VS Code chat. Type `/tc` to see them.
 
 | Command | Arguments | Purpose |
 |---------|-----------|---------|
-| `/tc-init` | `<base-url>` | Initialize Ouroboros Tester for a new domain |
-| `/tc-explore` | `<url> --name "<name>" [--auth]` | Explore a page and document all sections |
-| `/tc-verify` | `<page-slug> [--section <slug>] [--auth]` | Verify spec accuracy against the live site |
-| `/tc-architect` | `[--force]` | Generate Playwright test project from verified specs |
-| `/tc-write-tests` | `<page-slug> [--section <slug>] [--type create\|read\|update\|delete]` | Write test cases from verified specs |
-| `/tc-status` | `[--page <slug>]` | Show exploration and test coverage dashboard |
-| `/tc-run` | `<url> --name "<name>" [--auth]` | Full pipeline: explore → verify → architect → write |
+| `/orb-init` | `<base-url>` | Initialize Ouroboros Tester for a new domain |
+| `/orb-explore` | `<url> --name "<name>" [--auth]` | Explore a page and document all sections |
+| `/orb-verify` | `<page-slug> [--section <slug>] [--auth]` | Verify spec accuracy against the live site |
+| `/orb-architect` | `[--force]` | Generate Playwright test project from verified specs |
+| `/orb-write-tests` | `<page-slug> [--section <slug>] [--type create\|read\|update\|delete]` | Write test cases from verified specs |
+| `/orb-status` | `[--page <slug>]` | Show exploration and test coverage dashboard |
+| `/orb-run` | `<url> --name "<name>" [--auth]` | Full pipeline: explore → verify → architect → write |
 
 ---
 
@@ -185,13 +185,13 @@ Reads verified specs and the generated architecture to write comprehensive test 
 │   │   ├── test-architect.md       # Architect agent definition
 │   │   └── test-writer.md          # Writer agent definition
 │   ├── prompts/
-│   │   ├── tc-init.prompt.md
-│   │   ├── tc-explore.prompt.md
-│   │   ├── tc-verify.prompt.md
-│   │   ├── tc-architect.prompt.md
-│   │   ├── tc-write-tests.prompt.md
-│   │   ├── tc-status.prompt.md
-│   │   └── tc-run.prompt.md
+│   │   ├── orb-init.prompt.md
+│   │   ├── orb-explore.prompt.md
+│   │   ├── orb-verify.prompt.md
+│   │   ├── orb-architect.prompt.md
+│   │   ├── orb-write-tests.prompt.md
+│   │   ├── orb-status.prompt.md
+│   │   └── orb-run.prompt.md
 │   ├── workflows/
 │   │   ├── explore-page.md
 │   │   ├── verify-specs.md
@@ -368,7 +368,7 @@ test('should create a user', async ({ page, usersPage, dataManager }) => {
 
 ## State Tracking
 
-`src/docs/STATE.md` is the source of truth for progress. Run `/tc-status` at any time to see the dashboard:
+`src/docs/STATE.md` is the source of truth for progress. Run `/orb-status` at any time to see the dashboard:
 
 ```
 Ouroboros Tester Dashboard
@@ -389,9 +389,9 @@ Test Infrastructure: ✓ Set up
 Tests: 12 written, 10 passing, 2 failing
 
 Next Steps:
-  → /tc-explore https://app.example.com/settings --name "Settings"
-  → /tc-verify dashboard
-  → /tc-write-tests user-management --section user-list
+  → /orb-explore https://app.example.com/settings --name "Settings"
+  → /orb-verify dashboard
+  → /orb-write-tests user-management --section user-list
 ```
 
 ---

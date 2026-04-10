@@ -1,6 +1,7 @@
 ---
-agent: agent
 description: "Show the current status dashboard for domain exploration, spec verification, and test writing."
+argument-hint: "[--page <page-slug>]"
+agent: "agent"
 ---
 
 **Arguments:** $input

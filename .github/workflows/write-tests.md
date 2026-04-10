@@ -24,14 +24,14 @@ Generate comprehensive Playwright test suites for verified page specs using the 
 
 <step name="load_context" priority="first">
 1. Read `.ouroboros/config.json`
-2. Read `.ouroboros/architect-manifest.md` — **this is the binding contract from the architect. If this file does not exist, STOP and tell the user to run `/tc-architect` first.**
+2. Read `.ouroboros/architect-manifest.md` — **this is the binding contract from the architect. If this file does not exist, STOP and tell the user to run `/orb-architect` first.**
 3. Read `.ouroboros/test-map.json` for spec-to-test mapping
 4. Read page spec: `src/docs/{module}/{page}/spec.md`
 5. Read ALL architecture files listed in the manifest: every POM, fixture, helper, constant file
 6. Read framework base classes in `src/` (base page, components, fixtures, helpers)
 7. Read `src/docs/DOMAIN-TREE.md` for cross-page tests
 8. **Run spec validation:** `node scripts/validate-spec.mjs src/docs/{module}/{page}/sections/{section}/spec.md`
-   - If the spec has FAILURES, STOP and tell the user to run `/tc-verify` first
+   - If the spec has FAILURES, STOP and tell the user to run `/orb-verify` first
    - If the spec has only WARNINGS, proceed but note them
 </step>
 
