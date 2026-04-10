@@ -1,0 +1,15 @@
+---
+description: "Initialize Ouroboros Tester for a new domain. Sets up config, templates, and state tracking."
+allowed-tools: Bash, Read, Write, Edit, Glob
+---
+
+**Arguments:** $ARGUMENTS
+**Parse:** `<base-url> [--name <project-name>]`
+
+## Context
+Before taking any action, read:
+- `.github/workflows/init.md` — workflow steps to execute
+- `templates/config.template.json` — config template reference
+
+## Execute
+Follow the `init` workflow from `.github/workflows/init.md` end-to-end using the parsed arguments above.
