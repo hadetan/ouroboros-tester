@@ -23,7 +23,7 @@
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, dirname } from 'node:path';
 import { execSync } from 'node:child_process';
 
 const ROOT = resolve(process.cwd());
@@ -53,9 +53,10 @@ function findFiles(dir, pattern) {
 }
 
 function findSpecs(dir) { return findFiles(dir, /^spec\.md$/); }
+function findImpls(dir) { return findFiles(dir, /^impl\.md$/); }
 function findPageFiles(dir) { return findFiles(dir, /\.page\.ts$/); }
 
-/** Extract recipe names from a spec file */
+/** Extract recipe names from an impl file */
 function extractRecipeNames(content) {
   const names = [];
   const regex = /^###\s+Recipe:\s+(.+)$/gm;
@@ -66,7 +67,7 @@ function extractRecipeNames(content) {
   return names;
 }
 
-/** Extract API contract rows from spec */
+/** Extract API contract rows from impl */
 function extractApiContracts(content) {
   const contracts = [];
   for (const heading of ['API Contracts', 'API Endpoints']) {
@@ -150,16 +151,18 @@ function validate() {
   info.push('Manifest found: .ouroboros/architect-manifest.md');
 
   let specs = findSpecs(DOCS_DIR).filter(s => s.includes('sections/'));
+  let impls = findImpls(DOCS_DIR).filter(s => s.includes('sections/'));
   if (specFilter) {
     const filterPath = resolve(specFilter);
     specs = specs.filter(s => s === filterPath || s.includes(specFilter));
+    impls = impls.filter(s => s === filterPath || s.includes(specFilter));
   }
 
-  if (specs.length === 0) {
-    warnings.push('No section spec files found in src/docs/');
+  if (specs.length === 0 && impls.length === 0) {
+    warnings.push('No section spec/impl files found in src/docs/');
     return { failures, warnings, info };
   }
-  info.push(`Found ${specs.length} section spec(s)`);
+  info.push(`Found ${specs.length} section spec(s), ${impls.length} impl(s)`);
 
   const pomFiles = findPageFiles(PAGES_DIR);
   if (pomFiles.length === 0) {
@@ -184,11 +187,19 @@ function validate() {
   for (const specPath of specs) {
     const content = readFileSync(specPath, 'utf-8');
     const relSpec = relative(ROOT, specPath);
-    const recipes = extractRecipeNames(content);
 
-    if (recipes.length === 0) {
-      warnings.push(`${relSpec}: No recipes found in spec`);
-      continue;
+    // Find the sibling impl.md for recipe/API validation
+    const implPath = join(dirname(specPath), 'impl.md');
+    const implContent = existsSync(implPath) ? readFileSync(implPath, 'utf-8') : '';
+    const relImpl = existsSync(implPath) ? relative(ROOT, implPath) : null;
+
+    // Recipes and API contracts live in impl.md
+    const recipes = extractRecipeNames(implContent);
+
+    if (recipes.length === 0 && relImpl) {
+      warnings.push(`${relImpl}: No recipes found in impl`);
+    } else if (recipes.length === 0) {
+      warnings.push(`${relSpec}: No sibling impl.md — cannot check recipes`);
     }
 
     const allMethods = Object.values(allPomMethods).flat();
@@ -199,11 +210,11 @@ function validate() {
       }
     }
 
-    const contracts = extractApiContracts(content);
+    const contracts = extractApiContracts(implContent);
     if (contracts.length === 0) {
-      const hasCrud = /Create|Update|Delete|POST|PUT|DELETE/i.test(content);
+      const hasCrud = /Create|Update|Delete|POST|PUT|DELETE/i.test(implContent || content);
       if (hasCrud) {
-        warnings.push(`${relSpec}: Has CRUD operations but no API contract table`);
+        warnings.push(`${relImpl || relSpec}: Has CRUD operations but no API contract table`);
       }
     }
 

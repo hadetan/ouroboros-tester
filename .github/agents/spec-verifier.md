@@ -2,7 +2,7 @@
 name: spec-verifier
 description: "Re-crawls pages and sections documented by the crawl-explorer agent to verify spec accuracy and Interaction Recipes. Fixes incorrect specs and marks them as verified."
 tools:
-  - microsoft/playwright-mcp/*
+  - playwright/*
   - read
   - edit
   - search
@@ -37,11 +37,13 @@ Instead of checking "did the explorer document this?", ask:
 
 ### Phase 1: Load Existing Specs
 1. Read the target page spec from `src/docs/{module}/{page}/spec.md`
-2. Read all section specs under `src/docs/{module}/{page}/sections/`
+2. For each section under `src/docs/{module}/{page}/sections/`, read both:
+   - `spec.md` — scenarios and requirements (Given/When/Then)
+   - `impl.md` — technical details (recipes, locators, API contracts, framework details)
 3. Read the domain tree from `src/docs/DOMAIN-TREE.md`
 
 ### Phase 2: Recipe Re-Execution (MOST CRITICAL PHASE)
-**For each Interaction Recipe in the spec, reproduce it step by step using the EXACT commands documented:**
+**For each Interaction Recipe in `impl.md`, reproduce it step by step using the EXACT commands documented:**
 
 1. Set up the preconditions documented in the recipe
 2. Use the **exact locator** documented in the "Locator" field
@@ -67,9 +69,14 @@ Instead of checking "did the explorer document this?", ask:
 - Input fields where standard fill() doesn't work
 
 ### Phase 3: Structural Verification
-For each section spec, verify:
+For each section, verify across both files:
 
-**Element Accuracy:**
+**Scenario Accuracy (verify in `spec.md`):**
+- Execute each Given/When/Then scenario in `spec.md`
+- Verify the expected outcomes match reality
+- Note any deviations
+
+**Element Accuracy (verify in `impl.md`):**
 - Navigate to the page and section
 - Take a snapshot and compare against documented elements
 - Verify all documented UI elements actually exist
@@ -82,7 +89,8 @@ For each section spec, verify:
 - "Does DELETE work as documented?" → Test it
 
 **Scenario Verification:**
-- Execute each Given/When/Then scenario in the spec
+- Execute each Given/When/Then scenario in `spec.md`
+- Cross-reference with recipes in `impl.md` — the recipe should prove the scenario's interaction
 - Verify the expected outcomes match reality
 - Note any deviations
 
@@ -91,10 +99,12 @@ For each section spec, verify:
 - Create something on page A, navigate to page B, confirm it appears
 
 ### Phase 4: Spec Correction
-For each finding:
-- If spec is accurate: Mark requirement as `verified: true`
-- If spec is inaccurate: Fix the spec and add `corrected: true` with notes
-- If spec is missing something: Add the missing requirement with `added-by: verifier`
+For each finding, update the appropriate file:
+- **Scenario inaccuracies** → fix in `spec.md`
+- **Recipe/locator/API inaccuracies** → fix in `impl.md`
+- If spec is accurate: Mark requirement as `verified: true` in `spec.md`
+- If spec is inaccurate: Fix and add `corrected: true` with notes
+- If spec is missing something: Add the missing content with `added-by: verifier`
 
 ### Phase 5: Flow Simulation (MANDATORY for sections with CRUD)
 **Chain recipes into realistic end-to-end user flows to catch multi-step timing issues that individual recipe verification misses.**
@@ -111,7 +121,7 @@ The purpose of this phase is to catch issues like: "Create works alone, but afte
    - Execute the Delete recipe chain on that record (click delete icon → confirm)
    - Verify the record is gone from the grid
 
-2. **After each step, check for side effects documented in `## Mutation Side Effects`:**
+2. **After each step, check for side effects documented in `impl.md`'s `## Mutation Side Effects`:**
    - Are column filters preserved or cleared as documented?
    - Does pagination stay on the current page as documented?
    - Does the success alert behave as documented (persists? replaces previous? auto-dismisses?)
@@ -132,40 +142,40 @@ The purpose of this phase is to catch issues like: "Create works alone, but afte
 
 ## Verification Dimensions
 
-| Dimension | Question |
-|-----------|----------|
-| Element Accuracy | Do all documented elements exist on page? |
-| CRUD Completeness | Are all CRUD operations documented? |
-| Field Accuracy | Are form fields, types, and validations correct? |
-| Flow Accuracy | Do documented user flows actually work? |
-| API Accuracy | Do documented endpoints match actual requests? |
-| Relationship Accuracy | Do cross-page data flows work as documented? |
-| State Accuracy | Are empty/loading/error states documented correctly? |
-| Framework Details | Is `## UI Framework & Component Details` filled in with correct CSS class patterns? |
-| **URL Path Accuracy** | Does the spec's "App URL Path" match the actual browser URL when navigating to the section? |
-| **API Contract Accuracy** | Does `## API Contracts` have one row per CRUD endpoint with response shapes matching the live API? |
-| **Field Name Mappings** | Does `### Field Name Mappings` document all cases where UI labels differ from API field names? |
-| **Recipe Completeness** | Does every interactive component have an Interaction Recipe? |
-| **Recipe Accuracy** | Does every recipe's locator, method, and signal work when re-executed? |
-| **Recipe Assert Fields** | Does every recipe have an Assert field? Does the assertion pass when executed? |
-| **Recipe Failed Fields** | Are "Failed" sections accurate — do those approaches actually fail? |
-| **Input Fill Methods** | Does the spec document whether standard `.fill()` works for each input, or if native setter is required? |
-| **Conditional Rendering** | Are conditionally rendered elements documented with Render Condition, Trigger Action, and Disappear Condition? |
-| **Element Disambiguation** | When multiple instances of the same component exist, does the spec document how to target the correct one? |
-| **Modal Close Mechanisms** | Does every modal document ALL close mechanisms (Cancel, X icon, Escape, backdrop) with which exist and which don't? |
-| **Create vs Edit Differences** | Is the `## Create vs Edit Form Differences` table filled in? Are disabled/hidden/conditional fields documented? |
-| **Concurrency Notes** | Does the spec have `## Concurrency & Timing Notes` with timing-sensitive interactions documented? |
-| Locator Strategies | Does every component have a proven locator strategy? Are ARIA role gaps documented? |
-| Layout Constraints | Is the viewport size documented? Are elements outside viewport flagged? |
-| Feedback Mechanisms | Does every success/error feedback have its exact type and locator documented? No generic "toast" terms? |
-| Mutation Side Effects | Does the spec document what happens to the UI after each Create/Update/Delete? |
-| Signal Timing | Are async signals marked as async with appropriate wait strategies? |
-| Validation Completeness | Does the Form Fields table include all rules (format, length, pattern) — not just "required"? |
+| Dimension | Question | File |
+|-----------|----------|------|
+| Element Accuracy | Do all documented elements exist on page? | `impl.md` |
+| CRUD Completeness | Are all CRUD operations documented? | `spec.md` |
+| Field Accuracy | Are form fields, types, and validations correct? | `impl.md` |
+| Flow Accuracy | Do documented user flows actually work? | `spec.md` |
+| API Accuracy | Do documented endpoints match actual requests? | `impl.md` |
+| Relationship Accuracy | Do cross-page data flows work as documented? | `spec.md` |
+| State Accuracy | Are empty/loading/error states documented correctly? | `spec.md` |
+| Framework Details | Is `## UI Framework & Component Details` filled in with correct CSS class patterns? | `impl.md` |
+| **URL Path Accuracy** | Does the spec's "App URL Path" match the actual browser URL when navigating to the section? | `spec.md` |
+| **API Contract Accuracy** | Does `## API Contracts` have one row per CRUD endpoint with response shapes matching the live API? | `impl.md` |
+| **Field Name Mappings** | Does `### Field Name Mappings` document all cases where UI labels differ from API field names? | `impl.md` |
+| **Recipe Completeness** | Does every interactive component have an Interaction Recipe? | `impl.md` |
+| **Recipe Accuracy** | Does every recipe's locator, method, and signal work when re-executed? | `impl.md` |
+| **Recipe Assert Fields** | Does every recipe have an Assert field? Does the assertion pass when executed? | `impl.md` |
+| **Recipe Failed Fields** | Are "Failed" sections accurate — do those approaches actually fail? | `impl.md` |
+| **Input Fill Methods** | Does the spec document whether standard `.fill()` works for each input, or if native setter is required? | `impl.md` |
+| **Conditional Rendering** | Are conditionally rendered elements documented with Render Condition, Trigger Action, and Disappear Condition? | `impl.md` |
+| **Element Disambiguation** | When multiple instances of the same component exist, does the spec document how to target the correct one? | `impl.md` |
+| **Modal Close Mechanisms** | Does every modal document ALL close mechanisms (Cancel, X icon, Escape, backdrop) with which exist and which don't? | `impl.md` |
+| **Create vs Edit Differences** | Is the `## Create vs Edit Form Differences` table filled in? Are disabled/hidden/conditional fields documented? | `impl.md` |
+| **Concurrency Notes** | Does the spec have `## Concurrency & Timing Notes` with timing-sensitive interactions documented? | `impl.md` |
+| Locator Strategies | Does every component have a proven locator strategy? Are ARIA role gaps documented? | `impl.md` |
+| Layout Constraints | Is the viewport size documented? Are elements outside viewport flagged? | `impl.md` |
+| Feedback Mechanisms | Does every success/error feedback have its exact type and locator documented? No generic "toast" terms? | `impl.md` |
+| Mutation Side Effects | Does the spec document what happens to the UI after each Create/Update/Delete? | `impl.md` |
+| Signal Timing | Are async signals marked as async with appropriate wait strategies? | `impl.md` |
+| Validation Completeness | Does the Form Fields table include all rules (format, length, pattern) — not just "required"? | `impl.md` |
 
 ## Specific Verification Checks
 
 ### Step A: Framework & Locator Audit
-If `## UI Framework & Component Details` is empty or missing:
+If `impl.md`'s `## UI Framework & Component Details` is empty or missing:
 1. Open the page and run JavaScript to detect framework CSS class patterns on interactive elements
 2. For each dropdown/select, open it and test if `getByRole('option')` finds items with the correct visible text
 3. For each modal, check if `role="dialog"` exists
@@ -181,7 +191,7 @@ The explorer may have misidentified a container type. Re-verify by performing a 
 5. **Test ALL close mechanisms** (Cancel button, X icon, Escape key, backdrop/mask click via `dispatchEvent`). Compare with the explorer's classification and correct if different.
 
 ### Step B: Layout Audit
-If `### Layout Constraints` is empty or says "default viewport is fine":
+If `impl.md`'s `### Layout Constraints` is empty or says "default viewport is fine":
 1. Open every modal and drawer on the page.
 2. Run: `JSON.stringify(document.querySelector('button:last-of-type')?.getBoundingClientRect())` inside each modal to check if action buttons are below 768px (default viewport height).
 3. If any button's `.bottom` exceeds the viewport, document it.
@@ -194,7 +204,7 @@ For each CRUD operation:
 4. If the spec uses generic terms ("toast", "success message"), this is a failure — fix it with the exact type and locator
 
 ### Step D: Mutation Side Effects Audit
-If `## Mutation Side Effects` is empty:
+If `impl.md`'s `## Mutation Side Effects` is empty:
 1. Apply a column filter to the grid
 2. Create/Update/Delete a record
 3. Check: did the filter survive? Did the grid reload? Did pagination reset?

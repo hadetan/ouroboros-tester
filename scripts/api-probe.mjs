@@ -1042,14 +1042,14 @@ async function cmdRun() {
 }
 
 /**
- * verify-contract — Read a spec file, extract the API Contracts table, and probe
+ * verify-contract — Read an impl.md file, extract the API Contracts table, and probe
  * each endpoint live to verify they match.
  *
  * Usage:
- *   node scripts/api-probe.mjs verify-contract src/docs/.../spec.md --json
+ *   node scripts/api-probe.mjs verify-contract src/docs/.../impl.md --json
  *   node scripts/api-probe.mjs verify-contract --all --json
  *
- * For each row in the spec's ## API Contracts table:
+ * For each row in the impl file's ## API Contracts table:
  *   1. Probes the endpoint with the documented method
  *   2. Compares response status, response wrapper path, and field names
  *   3. Reports matches and mismatches
@@ -1072,7 +1072,7 @@ async function cmdVerifyContract() {
     specFiles = [resolve(specPath)];
   } else {
     output('error', 'verify-contract', null, [
-      'Usage: node scripts/api-probe.mjs verify-contract <spec-path> | --all [--json]',
+      'Usage: node scripts/api-probe.mjs verify-contract <impl-path> | --all [--json]',
     ]);
     return;
   }
@@ -1137,7 +1137,7 @@ async function cmdVerifyContract() {
   );
 }
 
-/** Recursively find spec.md files */
+/** Recursively find impl.md files (API contracts live in impl.md) */
 function findSpecFiles(dir) {
   const results = [];
   let entries;
@@ -1145,7 +1145,7 @@ function findSpecFiles(dir) {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) results.push(...findSpecFiles(fullPath));
-    else if (entry.name === 'spec.md') results.push(fullPath);
+    else if (entry.name === 'impl.md') results.push(fullPath);
   }
   return results;
 }
@@ -1279,7 +1279,7 @@ Commands:
   smoke [path]                        Auth + API probe + navigation check (all-in-one)
   intercept-snippet                   JS snippet for browser-side network capture
   run --code '<fn>' [--url <url>]     Run code in authenticated browser context
-  verify-contract <spec> [--all]      Verify spec API contracts against live endpoints
+  verify-contract <impl> [--all]      Verify API contracts from impl.md against live endpoints
 
 Flags:
   --json, --raw       Machine-readable JSON output
@@ -1297,7 +1297,7 @@ Examples:
   node scripts/api-probe.mjs intercept-snippet --json
   node scripts/api-probe.mjs run --code 'async (page) => page.title()' --json
   node scripts/api-probe.mjs run --url /OperationsData/Users --code 'async (page) => page.locator("[role=grid]").count()' --json
-  node scripts/api-probe.mjs verify-contract src/docs/module/page/sections/section/spec.md --json
+  node scripts/api-probe.mjs verify-contract src/docs/module/page/sections/section/impl.md --json
   node scripts/api-probe.mjs verify-contract --all --json
 `);
   process.exit(1);

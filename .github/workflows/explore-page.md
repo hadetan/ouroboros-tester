@@ -67,15 +67,24 @@ For each section (or filtered by --sections), explore and **write the spec to di
 3. Agent performs ARIA & Locator Audit (Phase 3)
 4. Agent performs CRUD analysis on the section (Phase 4)
 5. Agent documents Mutation Side Effects (Phase 5)
-6. **Agent writes section spec to disk NOW** — `src/docs/{module}/{page}/sections/{section-slug}/spec.md`
+6. **Agent writes section files to disk NOW:**
+   - `src/docs/{module}/{page}/sections/{section-slug}/spec.md` — scenarios and requirements
+   - `src/docs/{module}/{page}/sections/{section-slug}/impl.md` — technical details and recipes
 7. Agent captures screenshots to `src/docs/{module}/{page}/sections/{section-slug}/screenshots/`
 8. Update page spec with section completion status
 9. **Only after the spec file is written, proceed to the next section**
 
 **WHY:** The explorer makes many browser observation calls per section. If context compaction occurs before writing, discovered facts are lost. Writing after each section ensures completed work survives compaction.
 
-**CHECKPOINT:** Before marking a section as explored, verify the spec contains:
+**CHECKPOINT:** Before marking a section as explored, verify:
+
+In `spec.md`:
 - [ ] `## Section Info` — **App URL Path** is filled with exact browser path (not guessed from nav menu)
+- [ ] `## Requirements` — Given/When/Then scenarios for each discovered CRUD operation
+- [ ] `## States` — loading, empty, error states documented
+- [ ] No "Not fully explored" or "Requires follow-up" text
+
+In `impl.md`:
 - [ ] `## UI Framework & Component Details` — all tables filled
 - [ ] `### Accessibility & Locator Notes` — at least one row per interactive component
 - [ ] `### Layout Constraints` — viewport and modal overflow documented
@@ -87,7 +96,6 @@ For each section (or filtered by --sections), explore and **write the spec to di
 - [ ] `## Interaction Recipes` — one recipe per distinct interaction, each with Assert and Signal fields
 - [ ] `## Create vs Edit Form Differences` — filled if section has both create and edit forms
 - [ ] `## Concurrency & Timing Notes` — filled if section has mutations
-- [ ] No "Not fully explored" or "Requires follow-up" text anywhere in the spec
 </step>
 
 <step name="validate_specs">

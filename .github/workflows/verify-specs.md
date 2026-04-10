@@ -36,8 +36,9 @@ Re-crawl documented pages/sections to verify spec accuracy, fix inaccuracies, an
 <step name="verify_each_section">
 For each section (or filtered by --section):
 1. Read section spec from `src/docs/{module}/{page}/sections/{section-slug}/spec.md`
-2. Navigate to the page and locate the section
-3. Spawn spec-verifier agent with section spec and page context
+2. Read section impl from `src/docs/{module}/{page}/sections/{section-slug}/impl.md`
+3. Navigate to the page and locate the section
+4. Spawn spec-verifier agent with both files and page context
 4. Agent performs goal-backward verification of every requirement
 5. Agent performs Framework & Locator Audit (Step A) — fills in `## UI Framework & Component Details` if missing
 6. Agent performs Layout Audit (Step B) — verifies modals/drawers vs viewport

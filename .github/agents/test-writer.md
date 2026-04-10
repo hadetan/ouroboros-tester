@@ -2,7 +2,7 @@
 name: test-writer
 description: "Writes Playwright test cases from verified specs using the test architecture set up by the test-architect. Generates comprehensive CRUD test suites per section."
 tools:
-  - microsoft/playwright-mcp/*
+  - playwright/*
   - read
   - edit
   - search
@@ -43,33 +43,35 @@ Apply scope constraints at the test-case level. If CREATE is in scope but DELETE
 **Also read the source in `src/` to understand the base classes, pages, fixtures, helpers, and constants available.**
 
 ### Phase 2: Load Verified Spec
-1. Read the verified spec for the target section
+1. Read the verified section's two files:
+   - `spec.md` — scenarios and requirements (Given/When/Then) — defines the test case structure
+   - `impl.md` — technical details (recipes, locators, API contracts) — defines how to implement each test step
 2. Read the test map from `.ouroboros/test-map.json`
 3. Read the domain tree for cross-page test cases
 
-### Phase 2b: Extract Implementation Details from Spec (MANDATORY — before writing ANY code)
-From the spec's `## UI Framework & Component Details` and `## Interaction Recipes` sections, extract:
+### Phase 2b: Extract Implementation Details from `impl.md` (MANDATORY — before writing ANY code)
+From `impl.md`'s `## UI Framework & Component Details` and `## Interaction Recipes` sections, extract:
 1. **Frameworks** — Know which CSS class patterns to use
 2. **Interaction Recipes** — This is the authoritative source. For every interaction (open form, fill dropdown, apply filter, confirm delete, etc.), the recipe documents the exact locator, method, signal, AND Assert command. The POM should already implement these — verify it does.
 3. **Assert commands** — Each recipe's Assert field tells you exactly how to verify the interaction in a test. Use these commands directly in your test assertions.
-4. **Layout constraints** — If the spec says modals exceed viewport, verify the POM's save()/cancel() methods handle this (per the recipe's interaction method)
-5. **Feedback mechanisms** — Use EXACTLY the locator and Assertion Command from the spec's `## Feedback Mechanisms` table. Cross-reference with Interaction Recipes for signal timing.
-6. **Mutation side effects** — From the `## Mutation Side Effects` table, know whether filters reset after delete, whether the grid reloads, etc. Write assertions accordingly.
-7. **Create vs Edit Form Differences** — From the `## Create vs Edit Form Differences` table, know which fields are disabled, hidden, or conditional in edit mode. Do NOT assume edit form matches create form.
-8. **Concurrency & Timing Notes** — From the `## Concurrency & Timing Notes` section, identify timing-sensitive interactions and add appropriate waits between operations.
-9. **Validation rules** — From the `## Form Fields` table, verify the DataFactory generates compliant data.
+4. **Layout constraints** — If `impl.md` says modals exceed viewport, verify the POM's save()/cancel() methods handle this (per the recipe's interaction method)
+5. **Feedback mechanisms** — Use EXACTLY the locator and Assertion Command from `impl.md`'s `## Feedback Mechanisms` table. Cross-reference with Interaction Recipes for signal timing.
+6. **Mutation side effects** — From `impl.md`'s `## Mutation Side Effects` table, know whether filters reset after delete, whether the grid reloads, etc. Write assertions accordingly.
+7. **Create vs Edit Form Differences** — From `impl.md`'s `## Create vs Edit Form Differences` table, know which fields are disabled, hidden, or conditional in edit mode. Do NOT assume edit form matches create form.
+8. **Concurrency & Timing Notes** — From `impl.md`'s `## Concurrency & Timing Notes` section, identify timing-sensitive interactions and add appropriate waits between operations.
+9. **Validation rules** — From `impl.md`'s `## Form Fields` table, verify the DataFactory generates compliant data.
 
 **If the Interaction Recipes section is empty or missing, STOP and report that the spec is incomplete. Do NOT guess or discover interaction details through trial-and-error.**
 **If any recipe is missing an Assert field, report the gap but use the Signal description to derive a reasonable assertion.**
 
 ### Phase 2c: Virtual Grid Awareness (MANDATORY before writing grid assertions)
-Check the spec's `### Accessibility & Locator Notes` for grid row visibility:
+Check `impl.md`'s `### Accessibility & Locator Notes` for grid row visibility:
 1. **If the spec says `[role="row"]` is a zero-dimension wrapper** (common in virtual-scroll grid frameworks):
    - NEVER write `await expect(row).toBeVisible()` — it will always fail
    - Instead, assert on a gridcell: `await expect(row.getByRole('gridcell').first()).toBeVisible()`
    - The POM should have an `expectRowReady(row)` method that does this correctly — use it
 2. **If the grid has pagination and you create a record:**
-   - Check the spec's `## Mutation Side Effects` for where the record lands
+   - Check `impl.md`'s `## Mutation Side Effects` for where the record lands
    - Use the POM's pagination navigation method to find the record (e.g., `grid.findRowAcrossPages(text)`)
    - NEVER assume the created record is visible on the current page
 3. **When using `getByRole('row', { name: /pattern/ })` on virtual grids:**
@@ -173,7 +175,7 @@ For each failing test:
    - **Type error** → wrong method signature or missing import
    - **Navigation error** → page didn't load or redirect failed
 
-2. **Cross-reference with the spec's Interaction Recipe** for the failing interaction:
+2. **Cross-reference with `impl.md`'s Interaction Recipe** for the failing interaction:
    - Does the POM use the exact locator from the recipe's "Locator" field?
    - Does the POM use the exact method from the recipe's "Method" field?
    - Does the test assertion match the recipe's "Assert" field?
@@ -223,25 +225,25 @@ Mark the section as test-complete in `src/docs/STATE.md`
 3. Use data-factory for test data, never hardcode
 4. **ALL page interactions go through POM methods** — if the POM doesn't have a method you need, ADD it to the POM, don't work around it in the spec
 5. Use web-first assertions (toBeVisible, toHaveText, etc.)
-6. **Use the locator strategy from the spec's Interaction Recipes and `### Accessibility & Locator Notes` table** — if a component's recipe says standard `getByRole()` doesn't work, the POM should already use the correct method. Verify it does.
+6. **Use the locator strategy from `impl.md`'s Interaction Recipes and `### Accessibility & Locator Notes` table** — if a component's recipe says standard `getByRole()` doesn't work, the POM should already use the correct method. Verify it does.
 7. Add `test.describe.configure({ mode: 'parallel' })` when tests are independent
 8. Use soft assertions for non-critical checks
 9. Add meaningful test descriptions that reflect user behavior
 10. **For cleanup, use DataManager** — call `dataManager.track('entityType', entityId, '/api/endpoint')` after creating test data. The fixture handles deletion automatically after the test.
 11. For cross-page tests, use the domain tree to know which pages to check
 12. Tag tests with annotations: `test.info().annotations.push({ type: 'section', description: '{section}' })`
-13. **NEVER guess locators, feedback types, or viewport sizes** — all must come from the spec's Interaction Recipes and metadata tables. If a recipe is missing for an interaction you need, report the gap instead of experimenting.
+13. **NEVER guess locators, feedback types, or viewport sizes** — all must come from `impl.md`'s Interaction Recipes and metadata tables. If a recipe is missing for an interaction you need, report the gap instead of experimenting.
 14. **`scrollIntoViewIfNeeded()` belongs in the POM, not the spec** — if a POM method's target button might be below the fold, update the POM method to include the scroll.
-15. **For post-mutation assertions**, check the spec's `## Mutation Side Effects` table — if it says filters reset after delete, do NOT assert that a filter is still active after deletion.
+15. **For post-mutation assertions**, check `impl.md`'s `## Mutation Side Effects` table — if it says filters reset after delete, do NOT assert that a filter is still active after deletion.
 16. **Use `src/utils/config.ts` for config access** — never hardcode API base URLs, credentials, or domain-specific URLs. Import `getApiBaseUrl()` from `src/utils/config.ts`.
 17. **Use `src/helpers/assertions.helper.ts` for generic assertions** — if the Assertions helper has a method for what you need (e.g., `expectTableRowWithText`), use it. Domain-specific assertions belong in the POM.
 18. **Use `src/helpers/api.helper.ts` for API calls** — if you need to create/delete entities via API for setup/teardown, use the ApiHelper class. Never use raw `page.request.post/delete` in spec files.
 19. **Never modify files in `src/base/`, `src/components/`, or `src/utils/`** — these are the generic framework. Domain-specific code goes in `src/pages/`, `src/helpers/`, `src/fixtures/`.
-20. **NEVER use `toBeVisible()` on `[role="row"]` in virtual-scroll grids** — if the spec's `### Accessibility & Locator Notes` says rows are zero-dimension wrappers, assert on `row.getByRole('gridcell').first()` instead. Check the Interaction Recipe for grid row assertions.
-21. **After creating a record, NEVER assume it’s on the current grid page** — check the spec's `## Mutation Side Effects` for sort order and pagination behavior. Use the POM's pagination/search methods to locate the row. If the POM lacks such methods, add them first.
+20. **NEVER use `toBeVisible()` on `[role="row"]` in virtual-scroll grids** — if `impl.md`'s `### Accessibility & Locator Notes` says rows are zero-dimension wrappers, assert on `row.getByRole('gridcell').first()` instead. Check the Interaction Recipe for grid row assertions.
+21. **After creating a record, NEVER assume it's on the current grid page** — check `impl.md`'s `## Mutation Side Effects` for sort order and pagination behavior. Use the POM's pagination/search methods to locate the row. If the POM lacks such methods, add them first.
 22. **When tests fail during Phase 5, follow the Failure Diagnosis Protocol** — classify the error, cross-reference the spec's Interaction Recipe, use Playwright MCP to inspect the actual page state, and fix the root cause. Do NOT apply blind patches. Max 3 iterations per test before escalating.
 23. **Interaction Recipes are the single source of truth** — if a recipe's Method field says `evaluate(el => el.click())`, the POM method must use exactly that. If the POM doesn't match the recipe, update the POM first. Never work around a wrong POM method in the spec file.
 24. **If an interaction has no recipe, STOP and report the gap** — do not attempt to discover interaction mechanics yourself. The explorer should have proven every interaction. A missing recipe means the explorer must re-crawl.
 25. **Use each recipe's Assert field** — when asserting the result of an interaction, use the exact assertion from the recipe's Assert field. If the Assert field says "DON'T: expect(row).toBeVisible()", the test MUST NOT use that assertion.
-26. **Check Create vs Edit Form Differences** — before writing edit tests, read the `## Create vs Edit Form Differences` table to know which fields are disabled, hidden, or conditional in edit mode. Never assume edit form matches create form.
-27. **Check Concurrency & Timing Notes** — before writing tests that do sequential CRUD operations, read the `## Concurrency & Timing Notes` section. Add appropriate waits or assertions between operations as recommended.
+26. **Check Create vs Edit Form Differences** — before writing edit tests, read `impl.md`'s `## Create vs Edit Form Differences` table to know which fields are disabled, hidden, or conditional in edit mode. Never assume edit form matches create form.
+27. **Check Concurrency & Timing Notes** — before writing tests that do sequential CRUD operations, read `impl.md`'s `## Concurrency & Timing Notes` section. Add appropriate waits or assertions between operations as recommended.

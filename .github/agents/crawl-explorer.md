@@ -2,7 +2,7 @@
 name: crawl-explorer
 description: "Navigates target website using Playwright MCP, discovers page sections, understands CRUD operations, proves every interaction works with executable evidence, and documents findings with Interaction Recipes."
 tools:
-  - microsoft/playwright-mcp/*
+  - playwright/*
   - read
   - edit
   - search
@@ -52,43 +52,45 @@ Context compaction will erase your in-memory findings. The ONLY data that surviv
 
 For each section, you explore one CRUD action at a time (e.g., CREATE, then READ, then UPDATE, then DELETE). After fully exploring each action:
 
-1. **Write immediately.** Create or update the section's `spec.md` with everything you discovered about that action — its recipes, form fields, API contracts, mutation side effects, and feedback mechanisms. Use the template structure so downstream agents can consume partial specs.
+1. **Write immediately.** Create or update the section's **two spec files** with everything you discovered about that action. Use the template structure so downstream agents can consume partial specs.
+   - `spec.md` — scenarios and requirements (Given/When/Then, states, cross-page references)
+   - `impl.md` — technical details (recipes, form fields, API contracts, framework details, mutation side effects, feedback mechanisms)
 
-2. **First write creates the file.** When you explore the very first action of a section, create the spec file with:
+2. **First write creates both files.** When you explore the very first action of a section, create both files with:
    - All template sections present
    - The data you have so far filled in
    - Remaining template sections left as empty placeholders
 
-3. **Subsequent writes update the file.** When you explore the next action, read the existing spec file back from disk, then edit/append the new discoveries into the correct template sections. The spec is **built up incrementally** across actions.
+3. **Subsequent writes update the files.** When you explore the next action, read both existing files back from disk, then edit/append the new discoveries into the correct template sections. Both files are **built up incrementally** across actions.
 
-4. **Cross-action corrections.** If exploring a later action reveals something about an earlier action, update the relevant earlier section in the same spec file immediately.
+4. **Cross-action corrections.** If exploring a later action reveals something about an earlier action, update the relevant section in the affected file immediately.
 
 ### What Counts as One Action (Checkpoint Boundaries)
 
 Each of these is a checkpoint boundary — write to disk after completing it:
 
-| Checkpoint | What to Write |
-|-----------|---------------|
-| Page structure + framework detection | Section Info, Description, Location, UI Framework, Layout Constraints, Display Elements, Interactive Elements |
-| READ exploration (grid structure, pagination, filtering) | Interaction Recipes for navigation/filtering/pagination, grid measurements in Accessibility Notes |
-| CREATE exploration (form, validation, submit, post-create state) | CREATE requirement + scenarios, form field recipes, form fields table, API contract, mutation side effects row, feedback row, Create vs Edit differences (create column) |
-| UPDATE exploration (edit trigger, form differences, submit, post-update state) | UPDATE requirement + scenarios, edit-specific recipes, API contract row, mutation side effects row, Create vs Edit differences (edit column) |
-| DELETE exploration (trigger, confirmation, cancel, confirm, post-delete state) | DELETE requirement + scenarios, delete recipes, API contract row, mutation side effects row, feedback row |
-| Additional actions (send password, export, import, etc.) | Requirement + scenarios, recipes, API contract row, side effects row |
+| Checkpoint | Write to `spec.md` | Write to `impl.md` |
+|-----------|---------------------|---------------------|
+| Page structure + framework detection | Section Info, Description, Location | UI Framework, Layout Constraints, Display Elements, Interactive Elements |
+| READ exploration (grid structure, pagination, filtering) | — | Interaction Recipes for navigation/filtering/pagination, grid measurements in Accessibility Notes |
+| CREATE exploration (form, validation, submit, post-create state) | CREATE requirement + scenarios | Form field recipes, form fields table, API contract, mutation side effects row, feedback row, Create vs Edit differences (create column) |
+| UPDATE exploration (edit trigger, form differences, submit, post-update state) | UPDATE requirement + scenarios | Edit-specific recipes, API contract row, mutation side effects row, Create vs Edit differences (edit column) |
+| DELETE exploration (trigger, confirmation, cancel, confirm, post-delete state) | DELETE requirement + scenarios | Delete recipes, API contract row, mutation side effects row, feedback row |
+| Additional actions (send password, export, import, etc.) | Requirement + scenarios | Recipes, API contract row, side effects row |
 
 ### Analysis Paralysis Guard (Per-Action)
 
-**If you have made 12+ consecutive browser observation calls (snapshot, evaluate, screenshot) without writing to the spec file on disk, STOP exploring and write what you have discovered so far.** Then re-read the spec from disk and continue. Unwritten discoveries are lost to context compaction; written specs persist.
+**If you have made 12+ consecutive browser observation calls (snapshot, evaluate, screenshot) without writing to either spec file on disk, STOP exploring and write what you have discovered so far.** Then re-read both files from disk and continue. Unwritten discoveries are lost to context compaction; written files persist.
 
 ### Compaction Recovery Protocol
 
 After a context compaction occurs, you will lose your in-memory discoveries but your written specs survive on disk. To recover and continue:
 
 1. **Re-read your instructions** — read this agent file (`.github/agents/crawl-explorer.md`) to reload the exploration protocol, phases, and rules. Do NOT rely on memory of what the instructions said.
-2. **Re-read the current spec** — read the section's `spec.md` from disk to see what you have already written.
+2. **Re-read the current files** — read the section's `spec.md` and `impl.md` from disk to see what you have already written.
 3. **Re-read STATE.md** — check `src/docs/STATE.md` to see overall progress and which sections/actions remain.
-4. **Resume from where the spec ends** — the last-written action in the spec tells you where to continue. If CREATE recipes exist but UPDATE does not, start UPDATE exploration.
-5. **Do NOT re-explore actions already written** — trust the spec on disk. Only re-explore if you find a contradiction during a later action.
+4. **Resume from where the files end** — the last-written action in `impl.md` tells you where to continue. If CREATE recipes exist but UPDATE does not, start UPDATE exploration.
+5. **Do NOT re-explore actions already written** — trust the files on disk. Only re-explore if you find a contradiction during a later action.
 
 ---
 
@@ -577,13 +579,15 @@ For each interaction recipe:
 - Document data dependencies between pages
 
 ### Phase 8: Spec Documentation
-**You should already have a partially written spec on disk by this point** — the Incremental Checkpointing Protocol requires writing after each CRUD action, not waiting until the end. This phase is about ensuring completeness of the final spec, not about first-time writing.
+**You should already have partially written files on disk by this point** — the Incremental Checkpointing Protocol requires writing after each CRUD action, not waiting until the end. This phase is about ensuring completeness of the final files, not about first-time writing.
 
-For each page/section, the spec file must follow the template at `templates/section-spec.md`.
+For each page/section, two files are produced:
+- **`spec.md`** — follows the template at `templates/section-spec.md` (scenarios, requirements, states, cross-page references)
+- **`impl.md`** — follows the template at `templates/section-impl.md` (recipes, form fields, API contracts, framework details, mutation side effects, feedback)
 
-**CRITICAL: The Interaction Recipes section is the most important deliverable.** Every interaction you performed during Phases 3-6 must be captured as a recipe. A spec without recipes is incomplete — the test-writer cannot work from it.
+**CRITICAL: The Interaction Recipes section in `impl.md` is the most important deliverable.** Every interaction you performed during Phases 3-6 must be captured as a recipe. An `impl.md` without recipes is incomplete — the test-writer cannot work from it.
 
-**Before marking a section as done**, re-read the spec from disk and verify that every template section is filled in — not just the ones from the last action you explored. If any template section is still a placeholder, fill it now from your exploration data.
+**Before marking a section as done**, re-read both files from disk and verify that every template section is filled in — not just the ones from the last action you explored. If any template section is still a placeholder, fill it now from your exploration data.
 
 Each recipe must include (using the format from the template):
 - **Locator**: the exact locator expression you used and tested
@@ -594,8 +598,15 @@ Each recipe must include (using the format from the template):
 - **Render** (only for conditional elements): behavior (state-bound/once-triggered), trigger action, disappear condition
 - **Failed** (only if non-standard method): what you tried that didn't work AND the specific error
 
-**Fill in ALL sections of the template** — especially:
+**Fill in ALL sections across both templates** — especially:
+
+In `spec.md`:
 - `## Section Info` (with **App URL Path** captured from the actual browser URL, NOT guessed from menu text)
+- `## Requirements` (Given/When/Then scenarios for each CRUD operation)
+- `## States` (loading, empty, error)
+- `## Cross-Page References` (entity flows between pages)
+
+In `impl.md`:
 - `## UI Framework & Component Details` (what renders the UI)
 - `## Interaction Recipes` (the behavioral contract — most critical)
 - `## Form Fields` (with full validation rules, exact error messages, and locator strategies)
@@ -605,7 +616,7 @@ Each recipe must include (using the format from the template):
 - `## Feedback Mechanisms` (exact type, locator, behavior, and persistence for every feedback element)
 
 ### Phase 9: Self-Validation Gate (MANDATORY — run before marking section as explored)
-Before writing the spec to disk, run this completeness checklist mentally. If ANY item fails, go back and fill the gap:
+Before writing the files to disk, run this completeness checklist mentally. If ANY item fails, go back and fill the gap:
 
 ```
 SPEC COMPLETENESS CHECKLIST:
@@ -630,8 +641,10 @@ SPEC COMPLETENESS CHECKLIST:
 
 ## Output Format
 
-### Section Spec File
-Write specs to: `src/docs/{module}/{page}/sections/{section-slug}/spec.md`
+### Section Files
+Write to: `src/docs/{module}/{page}/sections/{section-slug}/`
+- `spec.md` — test scenarios and requirements
+- `impl.md` — technical implementation details
 
 ### URL-to-Folder Hierarchy Rules
 
@@ -643,6 +656,7 @@ Each `/Segment` in the URL path becomes a kebab-case subfolder.
 URL: /CategoryName/SubPage
   → src/docs/category-name/sub-page/
   → src/docs/category-name/sub-page/spec.md
+  → src/docs/category-name/sub-page/impl.md
 ```
 
 **Rule 2 — Sections discovered on a page go into `sections/`:**
@@ -650,6 +664,7 @@ Each distinct section found on a page gets its own subfolder under `sections/`.
 ```
 URL: /CategoryName/SubPage  (has section "active-records")
   → src/docs/category-name/sub-page/sections/active-records/spec.md
+  → src/docs/category-name/sub-page/sections/active-records/impl.md
 ```
 
 **Rule 3 — Query-parameter tabs are treated as sections, NOT separate pages:**
@@ -658,7 +673,9 @@ When the same URL path serves multiple views via `?tab=` (or similar query param
 URL: /CategoryName/SubPage?tab=listing
 URL: /CategoryName/SubPage?tab=settings
   → src/docs/category-name/sub-page/sections/listing/spec.md
+  → src/docs/category-name/sub-page/sections/listing/impl.md
   → src/docs/category-name/sub-page/sections/settings/spec.md
+  → src/docs/category-name/sub-page/sections/settings/impl.md
 ```
 
 **Rule 4 — A tab may itself contain multiple sections:**
@@ -666,27 +683,32 @@ If a single tab view has multiple distinct UI sections, nest them.
 ```
 URL: /CategoryName/SubPage?tab=listing  (has "created-records" and "imported-records")
   → src/docs/category-name/sub-page/sections/listing/sections/created-records/spec.md
+  → src/docs/category-name/sub-page/sections/listing/sections/created-records/impl.md
   → src/docs/category-name/sub-page/sections/listing/sections/imported-records/spec.md
+  → src/docs/category-name/sub-page/sections/listing/sections/imported-records/impl.md
 ```
 
 **Rule 5 — Deeper URLs extend naturally:**
 ```
 URL: /Admin/Settings/Roles
   → src/docs/admin/settings/roles/spec.md
+  → src/docs/admin/settings/roles/impl.md
   → src/docs/admin/settings/roles/sections/{section-slug}/spec.md
+  → src/docs/admin/settings/roles/sections/{section-slug}/impl.md
 ```
 
 ### State Updates
 After completing each CRUD action checkpoint for a section, update:
-- The section's `spec.md` with everything discovered about that action (create or update the file)
+- The section's `spec.md` with scenarios/requirements discovered about that action
+- The section's `impl.md` with technical details discovered about that action (recipes, form fields, API contracts, etc.)
 - `src/docs/STATE.md` with overall progress after the **last** action of a section is written (not after every action — only after a section is fully complete)
 
 ## Rules
 1. NEVER skip a section — document everything you find
-2. **WRITE AFTER EVERY ACTION — not after all actions.** After fully exploring one CRUD action (e.g., CREATE) for a section, immediately write or update the section's spec file on disk with everything you discovered about that action. Do NOT accumulate discoveries across multiple actions before writing. If context compaction occurs mid-exploration, previously written data survives on disk; unwritten data is lost forever. See the **Incremental Checkpointing Protocol** above for the exact checkpoint boundaries.
-3. **ANALYSIS PARALYSIS GUARD — if you have made 12+ consecutive browser observation calls (snapshot, evaluate, screenshot) without writing to a spec file on disk, STOP exploring and write what you have discovered so far.** You can always re-read the written spec and continue exploring from where you left off. Unwritten discoveries are lost to context compaction; written specs persist.
-4. **AFTER CONTEXT COMPACTION — re-read your instructions and the current spec.** When you detect that context has been compacted (your earlier exploration steps are no longer in the conversation), immediately execute the **Compaction Recovery Protocol**: re-read this agent file, the current spec, and STATE.md before continuing exploration. Do NOT rely on memory of what the instructions or previous discoveries said.
-5. **CROSS-ACTION UPDATES — if a later action reveals data about an earlier action, update it.** When exploring UPDATE you may discover that CREATE's filter preservation claim was wrong, or when exploring DELETE you may capture a feedback message format that applies to CREATE too. Read the existing spec, update the affected rows/sections, and write back to disk immediately.
+2. **WRITE AFTER EVERY ACTION — not after all actions.** After fully exploring one CRUD action (e.g., CREATE) for a section, immediately write or update both `spec.md` (scenarios) and `impl.md` (technical details) on disk with everything you discovered about that action. Do NOT accumulate discoveries across multiple actions before writing. If context compaction occurs mid-exploration, previously written data survives on disk; unwritten data is lost forever. See the **Incremental Checkpointing Protocol** above for the exact checkpoint boundaries.
+3. **ANALYSIS PARALYSIS GUARD — if you have made 12+ consecutive browser observation calls (snapshot, evaluate, screenshot) without writing to either file on disk, STOP exploring and write what you have discovered so far.** You can always re-read the written files and continue exploring from where you left off. Unwritten discoveries are lost to context compaction; written files persist.
+4. **AFTER CONTEXT COMPACTION — re-read your instructions and both files.** When you detect that context has been compacted (your earlier exploration steps are no longer in the conversation), immediately execute the **Compaction Recovery Protocol**: re-read this agent file, the current spec.md, impl.md, and STATE.md before continuing exploration. Do NOT rely on memory of what the instructions or previous discoveries said.
+5. **CROSS-ACTION UPDATES — if a later action reveals data about an earlier action, update it.** When exploring UPDATE you may discover that CREATE's filter preservation claim was wrong, or when exploring DELETE you may capture a feedback message format that applies to CREATE too. Read the existing file, update the affected rows/sections, and write back to disk immediately.
 6. Always capture network requests during CRUD operations — **set up request interception BEFORE each mutation and record the endpoint, method, payload shape, and response shape in the spec**. This is the architect's only source of truth for API helper design.
 7. If authentication is required, use credentials from `.ouroboros/config.json`
 8. If you discover a cross-page relationship, immediately document it in `src/docs/DOMAIN-TREE.md`

@@ -36,7 +36,7 @@ node scripts/validate-spec.mjs src/docs/.../spec.md   # Validate a single spec
 node scripts/validate-spec.mjs --all                   # Validate all specs
 node scripts/api-probe.mjs auth                        # Authenticate and save session
 node scripts/api-probe.mjs probe GET /api/path         # Make authenticated API call
-node scripts/api-probe.mjs verify-contract src/docs/.../spec.md
+node scripts/api-probe.mjs verify-contract src/docs/.../impl.md
 ```
 
 ## Agent Pipeline
@@ -71,16 +71,17 @@ Commands are thin wrappers — all logic lives in shared files:
 ## Architecture
 
 ### File Organization
-URL paths are mapped to folder hierarchies in kebab-case:
+URL paths are mapped to folder hierarchies in kebab-case. Each section produces **two files**: `spec.md` (scenarios & requirements) and `impl.md` (technical implementation details):
 ```
 URL: /CategoryName/SubPage?tab=listing
-  → src/docs/category-name/sub-page/sections/listing/spec.md   (generated spec)
+  → src/docs/category-name/sub-page/sections/listing/spec.md   (scenarios & requirements)
+  → src/docs/category-name/sub-page/sections/listing/impl.md   (technical: recipes, locators, API)
   → src/pages/category-name/sub-page.page.ts                   (generated POM)
   → src/tests/category-name/sub-page/listing.spec.ts           (generated tests)
 ```
 
 ### Source Layout (`src/`)
-- `docs/` — Generated specs, STATE.md, DOMAIN-TREE.md (specs are gitignored; STATE and DOMAIN-TREE are tracked)
+- `docs/` — Generated specs (spec.md + impl.md per section), STATE.md, DOMAIN-TREE.md (specs are gitignored; STATE and DOMAIN-TREE are tracked)
 - `base/` — BasePage class (all page objects inherit from this)
 - `components/` — Reusable UI component objects (table, form, modal, navigation, toast)
 - `fixtures/` — Playwright test fixtures (auth setup, data manager, domain fixture)
@@ -108,13 +109,30 @@ URL: /CategoryName/SubPage?tab=listing
 
 `.ouroboros/testing-scope.md` lets users define what to test and what to skip. All agents read this file before running. If both sections are empty, agents use their default behavior. Created by `/orb-init`.
 
-## Spec Format
+## Spec Format (Two-File Structure)
 
-Specs are markdown files in `src/docs/{module}/{page}/sections/{section}/spec.md`. They follow Given/When/Then scenarios and must include:
+Each section produces **two files** in `src/docs/{module}/{page}/sections/{section}/`:
+
+### `spec.md` — Scenarios & Requirements
+The "what to test" — business behavior documented as Given/When/Then scenarios:
+- Section description and URL location
+- Requirements with Given/When/Then test scenarios
+- States (loading, empty, error)
+- Cross-page references
+- Verification status
+
+### `impl.md` — Technical Implementation
+The "how to test" — locators, recipes, API contracts, and framework details:
 - UI elements with ARIA roles and recommended locators
-- API contracts (method, path, request/response shapes)
+- UI framework & component details (library, patterns)
 - Interaction Recipes (trigger → locator → Playwright method → assertion → signal)
+- Form fields with types, validation rules, and defaults
+- API contracts (method, path, request/response shapes)
+- Field name mappings (UI label → API field → DB column)
 - Mutation side effects (what changes after each operation)
 - Feedback mechanisms (exact toast/alert messages and their locators)
+- Concurrency & timing notes
 
-See `templates/section-spec.md` for the full template structure.
+Both files cross-link to each other. Agents read `spec.md` for test structure and `impl.md` for implementation details.
+
+See `templates/section-spec.md` and `templates/section-impl.md` for template structures.

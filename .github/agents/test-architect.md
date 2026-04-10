@@ -28,7 +28,9 @@ The test-map at `.ouroboros/test-map.json` should reflect scope constraints — 
 ## Process
 
 ### Phase 1: Analyze Domain
-1. Read all verified specs from `src/docs/`
+1. Read all verified specs from `src/docs/` — for each section, read both:
+   - `spec.md` — scenarios and requirements (what to test)
+   - `impl.md` — technical details: recipes, locators, API contracts, framework details (how to test)
 2. Read the domain tree from `src/docs/DOMAIN-TREE.md`
 3. Read project config from `.ouroboros/config.json`
 4. Read the existing framework in `src/` — understand what base classes, components, fixtures, and helpers are already available
@@ -73,7 +75,7 @@ Use `scripts/api-probe.mjs` to verify contracts programmatically instead of manu
 
    **Use `bodyShape` and `fieldInventory` directly** to define your TypeScript interfaces in the API helper. Do NOT infer types from form labels.
 
-3. **Also extract API details from specs:** The verified spec's Interaction Recipes and API section should document the exact endpoint, method, request payload, and response shape captured via network interception during exploration. Cross-reference these with probe output — if they differ, the probe output is authoritative.
+3. **Also extract API details from `impl.md`:** The verified `impl.md`'s Interaction Recipes and API section should document the exact endpoint, method, request payload, and response shape captured via network interception during exploration. Cross-reference these with probe output — if they differ, the probe output is authoritative.
 
 4. **Run a full smoke test** to verify auth + API + navigation work end-to-end:
    ```bash
@@ -150,15 +152,15 @@ Create a mapping file at `.ouroboros/test-map.json` that maps:
 The test-writer agent will consume everything you create. If you create something the writer doesn't know how to use, your work is wasted. Follow these rules to ensure zero wasted infrastructure:
 
 ### Rule A: Nothing Generic — Everything Spec-Driven
-Do NOT create generic base components with CSS-selector guessing (e.g., `'[class*="toast"], [class*="notification"], [class*="success"]'`). Every component and helper must use the EXACT selectors, CSS classes, and ARIA patterns documented in the verified specs and their Interaction Recipes.
+Do NOT create generic base components with CSS-selector guessing (e.g., `'[class*=\"toast\"], [class*=\"notification\"], [class*=\"success\"]'`). Every component and helper must use the EXACT selectors, CSS classes, and ARIA patterns documented in the verified `impl.md` files and their Interaction Recipes.
 
 **BAD (guessing selectors):**
 ```typescript
-// This will never work — guessing selectors
-get root() { return this.page.locator('[role="alert"], [class*="toast"], [class*="notification"]'); }
+// This will never work \u2014 guessing selectors
+get root() { return this.page.locator('[role=\"alert\"], [class*=\"toast\"], [class*=\"notification\"]'); }
 ```
 
-**GOOD (from spec's Interaction Recipe):**
+**GOOD (from impl.md's Interaction Recipe):**
 ```typescript
 // Recipe "Submit Create Form" says: success feedback locator is `page.locator('.specific-notice-class')`
 get root() { return this.page.locator('.specific-notice-class'); }
@@ -190,7 +192,7 @@ Config loading is handled by `src/utils/config.ts`. All files (`auth.setup.ts`, 
 
 ### Rule F: DataFactory Must Match Spec Validation Rules
 The data factory is in `src/helpers/data-factory.ts` and contains both base utilities and domain-specific generators.
-Read EVERY field's validation rules from the spec's `## Form Fields` table. The factory must generate data that passes ALL validation — not just required. For example:
+Read EVERY field's validation rules from `impl.md`'s `## Form Fields` table. The factory must generate data that passes ALL validation — not just required. For example:
 - If the spec says email must have a valid TLD, use `@example.com` not `@ouroboros.local`
 - If the spec says password needs special chars, include them
 - The `uniqueEmail()` helper must ALSO use the correct domain, not just the `user()` factory
@@ -204,11 +206,11 @@ Playwright docs explicitly discourage `waitForLoadState('networkidle')` — it's
 ### Rule J: Virtual Grid Row Locators (CRITICAL for grids with custom rendering)
 Many grid frameworks render `[role="row"]` as zero-dimension wrapper elements. Playwright considers these "hidden" — `toBeVisible()` will always fail on them, and `locator.click()` may time out.
 
-**Read the spec's `### Accessibility & Locator Notes` section** to determine:
+**Read `impl.md`'s `### Accessibility & Locator Notes` section** to determine:
 1. Whether `[role="row"]` elements have real dimensions or are zero-dimension wrappers
 2. Whether `[role="gridcell"]` elements have real dimensions
 
-**If the spec says rows are zero-dimension wrappers:**
+**If the spec's `impl.md` says rows are zero-dimension wrappers:**
 - The POM's `rows` getter should use `getByRole('row')` to FIND rows (accessibility tree works), but...
 - NEVER use `await expect(row).toBeVisible()` — it will always fail
 - Instead, assert on a gridcell WITHIN the row: `await expect(row.getByRole('gridcell').first()).toBeVisible()`
@@ -228,7 +230,7 @@ await expect(row.getByRole('gridcell').first()).toBeVisible(); // ✅ gridcell h
 ```
 
 ### Rule L: Interaction Recipes → POM Methods (CRITICAL)
-Every Interaction Recipe in the verified spec MUST map to a POM method. The POM method MUST implement the **exact interaction method** documented in the recipe.
+Every Interaction Recipe in `impl.md` MUST map to a POM method. The POM method MUST implement the **exact interaction method** documented in the recipe.
 
 **The recipe is the source of truth.** If a recipe says:
 - Method: `evaluate(el => el.click())` → the POM method uses `evaluate`
@@ -259,25 +261,25 @@ async openColumnFilter(columnName: string) {
 **If a recipe's "Failed" field lists `fill()`, the POM method MUST NOT use `.fill()`.** Use the native setter approach documented in the recipe instead.
 
 ### Rule L2: Create vs Edit Form Handling
-Read the spec's `## Create vs Edit Form Differences` table. The POM must handle differences:
+Read `impl.md`'s `## Create vs Edit Form Differences` table. The POM must handle differences:
 - For fields that are disabled in edit mode: the POM's edit fill method should skip them
 - For fields hidden in edit mode (e.g., a field only in create mode): the POM's edit fill method should not attempt to fill them
 - For conditional fields (e.g., a dropdown that appears only when another field has a certain value): the POM should expose a method that handles the condition
 
 ### Rule L3: Modal Close Mechanisms
-Read the spec's recipes for every modal. The POM must expose close methods for ALL documented mechanisms:
+Read `impl.md`'s recipes for every modal. The POM must expose close methods for ALL documented mechanisms:
 - If the modal has a Cancel button: expose `clickCancel()`
 - If the modal has an X icon: expose `closeByIcon()`
 - If the modal has NO Cancel button (only X icon): do NOT expose `clickCancel()` — this prevents the test-writer from calling a method that would fail
 
 ### Rule K: Pagination Navigation for Post-Mutation Assertions
-If a grid has pagination and the spec documents that new records appear on a specific page (not necessarily page 1):
+If a grid has pagination and `impl.md` documents that new records appear on a specific page (not necessarily page 1):
 1. The POM MUST expose a `navigateToPage(n)` or `navigateToLastPage()` method
 2. The POM MUST expose a `findRowAcrossPages(text)` method that iterates through pages to find a specific row
 3. The POM MUST expose a method to get the current page number and total pages
 4. Test files should NEVER manually click pagination buttons — the POM handles this
 
-Read the spec's `## Mutation Side Effects` table to know:
+Read `impl.md`'s `## Mutation Side Effects` table to know:
 - Where new records appear after creation (first page? last page? alphabetical position?)
 - Whether the grid auto-navigates to the new record or stays on the current page
 - The architect MUST create POM methods that handle this navigation

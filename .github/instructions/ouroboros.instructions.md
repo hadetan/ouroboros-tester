@@ -20,7 +20,7 @@ You are working in the Ouroboros Tester project — an AI-driven domain test aut
 - `.ouroboros/testing-scope.md` — User-defined testing scope (what to test / what not to test)
 - `src/docs/STATE.md` — Progress tracking
 - `src/docs/DOMAIN-TREE.md` — Cross-page entity relationships
-- `src/docs/` — Page and section specs (domain requirement docs)
+- `src/docs/` — Page and section specs (`spec.md` for scenarios, `impl.md` for technical details)
 - `src/base/` — BasePage class
 - `src/components/` — Generic UI components
 - `src/fixtures/` — Fixtures (base + domain test.fixture)

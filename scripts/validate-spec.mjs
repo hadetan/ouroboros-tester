@@ -28,7 +28,7 @@ const jsonOutput = args.includes('--json');
 const validateAll = args.includes('--all');
 const specPaths = args.filter(a => !a.startsWith('--'));
 
-/** Recursively find all spec.md files under a directory */
+/** Recursively find all spec.md and impl.md files under a directory */
 function findSpecs(dir) {
   const results = [];
   let entries;
@@ -41,7 +41,7 @@ function findSpecs(dir) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       results.push(...findSpecs(fullPath));
-    } else if (entry.name === 'spec.md') {
+    } else if (entry.name === 'spec.md' || entry.name === 'impl.md') {
       results.push(fullPath);
     }
   }
@@ -132,11 +132,68 @@ function validateSpec(filePath) {
   const relPath = relative(ROOT, filePath);
   const failures = [];
   const warnings = [];
+  const fileName = filePath.split('/').pop();
 
   const isPageSpec = !relPath.includes('sections/');
-  if (isPageSpec) {
+  if (isPageSpec && fileName === 'spec.md') {
     return validatePageSpec(content, relPath);
   }
+
+  if (fileName === 'impl.md') {
+    return validateImpl(content, relPath);
+  }
+
+  const placeholders = content.match(/\{(section-name|page-name|entity|create-button-text|submit-button-text|edit-button-text|delete-button-text|save-button-text|cancel-button-text|confirm-message|confirm-button-text|required-field|required-fields|empty-state-message|exact-message|exact-error-message|feedback-type|confirmation-type|display-area|field|new-value|page-size|search-term|Category|SubPage)\}/g);
+  if (placeholders) {
+    const unique = [...new Set(placeholders)];
+    failures.push(`TEMPLATE: Unfilled template placeholders found: ${unique.join(', ')} — these must be replaced with actual values from the live site`);
+  }
+
+  const hasUrlPath = /\*\*App URL Path:\*\*\s*\S+/.test(content);
+  if (!hasUrlPath) {
+    failures.push('MISSING: "App URL Path" not found in ## Section Info — must be captured from actual browser URL');
+  }
+
+  const hasRequirements = sectionHasContent(content, 'Requirements');
+  if (!hasRequirements.exists || !hasRequirements.hasContent) {
+    failures.push('MISSING/EMPTY: ## Requirements section — must contain Given/When/Then scenarios');
+  }
+
+  const scenarios = content.match(/#### Scenario:[\s\S]*?(?=####|## |\n---\n|$)/g) || [];
+  if (scenarios.length === 0 && hasRequirements.exists) {
+    failures.push('EMPTY: ## Requirements has no #### Scenario: entries');
+  }
+
+  for (const scenario of scenarios) {
+    if (/THEN.*success message/i.test(scenario) && !/role="alert"|class.*=|locator\(|\.alert|\[data-/i.test(scenario)) {
+      warnings.push('WARNING: A scenario THEN clause uses generic "success message" without specifying exact feedback selector');
+    }
+  }
+
+  const implPath = filePath.replace(/spec\.md$/, 'impl.md');
+  let implExists = false;
+  try {
+    statSync(implPath);
+    implExists = true;
+  } catch {}
+  if (!implExists) {
+    failures.push('MISSING: impl.md does not exist alongside spec.md — technical details file is required');
+  }
+
+  if (/not fully explored/i.test(content)) {
+    failures.push('INCOMPLETE: Spec contains "Not fully explored" — all sections must be completed');
+  }
+  if (/requires follow-up/i.test(content)) {
+    failures.push('INCOMPLETE: Spec contains "Requires follow-up" — all sections must be completed');
+  }
+
+  return { path: relPath, failures, warnings, isPageSpec: false, fileType: 'spec' };
+}
+
+/** Validate impl.md (technical implementation details) */
+function validateImpl(content, relPath) {
+  const failures = [];
+  const warnings = [];
 
   const placeholders = content.match(/\{(section-name|page-name|interaction-name|modal-class|framework-alert-class|framework-error-class|field-name|apiFieldId|apiFieldName|filter-dialog-class|Category|SubPage)\}/g);
   if (placeholders) {
@@ -150,7 +207,6 @@ function validateSpec(filePath) {
   } else if (!recipes.hasContent) {
     failures.push('EMPTY: ## Interaction Recipes has no recipes (only template comments)');
   } else {
-    // Check each recipe has required fields
     const recipeBlocks = content.match(/### Recipe:.+/g) || [];
     if (recipeBlocks.length === 0) {
       failures.push('EMPTY: ## Interaction Recipes has no ### Recipe: entries');
@@ -184,11 +240,6 @@ function validateSpec(filePath) {
     if (recipeSection.includes('.fill(') && !recipeSection.includes('Assert') && !recipeSection.includes('assert')) {
       warnings.push('WARNING: Recipe uses .fill() but no Assert verifies the filled value persists — add value persistence assertion');
     }
-  }
-
-  const hasUrlPath = /\*\*App URL Path:\*\*\s*\S+/.test(content);
-  if (!hasUrlPath) {
-    failures.push('MISSING: "App URL Path" not found in ## Section Info — must be captured from actual browser URL');
   }
 
   const hasCrud = /Creation|Update|Delete|Create|Edit|POST|PUT|DELETE/i.test(content);
@@ -258,7 +309,6 @@ function validateSpec(filePath) {
     if (!mutSection.includes('Filters Preserved') && !mutSection.includes('Filter')) {
       warnings.push('WARNING: ## Mutation Side Effects table may be missing Filters Preserved column');
     }
-    // Validate table has at least 5 columns (Operation | Filters Preserved? | Pagination State | Alert Text | Alert Persists?)
     const mutTableHeader = mutSection.match(/^\|.+\|$/m)?.[0] || '';
     const colCount = (mutTableHeader.match(/\|/g) || []).length - 1;
     if (colCount > 0 && colCount < 5) {
@@ -266,9 +316,8 @@ function validateSpec(filePath) {
     }
   }
 
-  const hasRequirements = content.includes('## Requirements');
   const hasCreateOrUpdate = /Creation|Update|Create|Edit/i.test(content);
-  if (hasRequirements && hasCreateOrUpdate) {
+  if (hasCreateOrUpdate) {
     const formFields = sectionHasContent(content, 'Form Fields');
     if (!formFields.exists) {
       failures.push('MISSING: ## Form Fields section (required for sections with Create/Update operations)');
@@ -299,22 +348,14 @@ function validateSpec(filePath) {
     }
   }
 
-
   if (/not fully explored/i.test(content)) {
-    failures.push('INCOMPLETE: Spec contains "Not fully explored" — all sections must be completed');
+    failures.push('INCOMPLETE: impl.md contains "Not fully explored" — all sections must be completed');
   }
   if (/requires follow-up/i.test(content)) {
-    failures.push('INCOMPLETE: Spec contains "Requires follow-up" — all sections must be completed');
+    failures.push('INCOMPLETE: impl.md contains "Requires follow-up" — all sections must be completed');
   }
 
-  const scenarios = content.match(/#### Scenario:[\s\S]*?(?=####|## |\n---\n|$)/g) || [];
-  for (const scenario of scenarios) {
-    if (/THEN.*success message/i.test(scenario) && !/role="alert"|class.*=|locator\(|\.alert|\[data-/i.test(scenario)) {
-      warnings.push('WARNING: A scenario THEN clause uses generic "success message" without specifying exact feedback selector');
-    }
-  }
-
-  return { path: relPath, failures, warnings, isPageSpec: false };
+  return { path: relPath, failures, warnings, isPageSpec: false, fileType: 'impl' };
 }
 
 let specs = [];
@@ -336,6 +377,8 @@ if (specs.length === 0) {
 const results = specs.map(validateSpec);
 const sectionResults = results.filter(r => !r.isPageSpec);
 const pageResults = results.filter(r => r.isPageSpec);
+const specResults = sectionResults.filter(r => r.fileType === 'spec');
+const implResults = sectionResults.filter(r => r.fileType === 'impl');
 
 if (jsonOutput) {
   console.log(JSON.stringify(results, null, 2));
@@ -363,28 +406,51 @@ if (jsonOutput) {
   }
 
   if (sectionResults.length > 0) {
-    console.log('\n── Section Specs ──');
-  }
-  for (const result of sectionResults) {
-    const status = result.failures.length === 0 ? '✅' : '❌';
-    console.log(`\n${status} ${result.path}`);
+    if (specResults.length > 0) {
+      console.log('\n── Section Specs (spec.md) ──');
+      for (const result of specResults) {
+        const status = result.failures.length === 0 ? '✅' : '❌';
+        console.log(`\n${status} ${result.path}`);
 
-    for (const f of result.failures) {
-      console.log(`  ❌ ${f}`);
-      totalFailures++;
+        for (const f of result.failures) {
+          console.log(`  ❌ ${f}`);
+          totalFailures++;
+        }
+        for (const w of result.warnings) {
+          console.log(`  ⚠️  ${w}`);
+          totalWarnings++;
+        }
+        if (result.failures.length === 0 && result.warnings.length === 0) {
+          console.log('  All checks passed');
+        }
+      }
     }
-    for (const w of result.warnings) {
-      console.log(`  ⚠️  ${w}`);
-      totalWarnings++;
-    }
-    if (result.failures.length === 0 && result.warnings.length === 0) {
-      console.log('  All checks passed');
+
+    if (implResults.length > 0) {
+      console.log('\n── Section Impl (impl.md) ──');
+      for (const result of implResults) {
+        const status = result.failures.length === 0 ? '✅' : '❌';
+        console.log(`\n${status} ${result.path}`);
+
+        for (const f of result.failures) {
+          console.log(`  ❌ ${f}`);
+          totalFailures++;
+        }
+        for (const w of result.warnings) {
+          console.log(`  ⚠️  ${w}`);
+          totalWarnings++;
+        }
+        if (result.failures.length === 0 && result.warnings.length === 0) {
+          console.log('  All checks passed');
+        }
+      }
     }
   }
 
   console.log(`\n${'─'.repeat(60)}`);
   console.log(`Page specs checked: ${pageResults.length}`);
-  console.log(`Section specs checked: ${sectionResults.length}`);
+  console.log(`Section spec.md checked: ${specResults.length}`);
+  console.log(`Section impl.md checked: ${implResults.length}`);
   console.log(`Failures: ${totalFailures}`);
   console.log(`Warnings: ${totalWarnings}`);
 
