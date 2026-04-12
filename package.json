@@ -1,6 +1,6 @@
 {
   "name": "ouroboros-tester",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "Ouroboros Tester — AI-driven domain test automation framework with Playwright",
   "type": "module",
   "exports": {
