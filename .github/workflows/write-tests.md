@@ -24,15 +24,17 @@ Generate comprehensive Playwright test suites for verified page specs using the 
 
 <step name="load_context" priority="first">
 1. Read `.ouroboros/config.json`
-2. Read `.ouroboros/architect-manifest.md` — **this is the binding contract from the architect. If this file does not exist, STOP and tell the user to run `/orb-architect` first.**
+2. Read `.ouroboros/architect-manifest.md` — the binding contract from the architect.
+   - If exists → use it
+   - Else → discover architecture from `src/` directly: read all files in `src/pages/`, `src/fixtures/`, `src/helpers/`, `src/components/`, `src/base/`
 3. Read `.ouroboros/test-map.json` for spec-to-test mapping
 4. Read page spec: `src/docs/{module}/{page}/spec.md`
-5. Read ALL architecture files listed in the manifest: every POM, fixture, helper, constant file
+5. Read ALL architecture files listed in the manifest (or discovered from source)
 6. Read framework base classes in `src/` (base page, components, fixtures, helpers)
 7. Read `src/docs/DOMAIN-TREE.md` for cross-page tests
 8. **Run spec validation:** `node scripts/validate-spec.mjs src/docs/{module}/{page}/sections/{section}/spec.md`
-   - If the spec has FAILURES, STOP and tell the user to run `/orb-verify` first
-   - If the spec has only WARNINGS, proceed but note them
+   - FAILURES → attempt one fix pass (verify with Playwright MCP, correct spec, re-validate). If failures persist, proceed — test-writer handles individual issues via deviation rules.
+   - WARNINGS → proceed, note them
 </step>
 
 <step name="plan_tests">
@@ -69,10 +71,10 @@ For each section, spawn test-writer agent to generate:
    b. Cross-reference with the spec's Interaction Recipe for the failing interaction
    c. Use browser MCP to diagnose (take snapshot, check element state)
    d. Fix the root cause — update POM if it doesn't match recipe, update assertion if it doesn't match Assertion Command
-   e. Max 3 iterations per failing test. After 3 iterations, STOP and report:
-      - The exact error
-      - What the spec says vs what the page shows
-      - Which upstream agent (explorer or architect) needs to fix what
+   e. Max 3 iterations per failing test. After 3 iterations:
+      - Skip the test with `test.skip('BLOCKED: [reason]')` and document as `<!-- BLOCKED -->` comment
+      - **Continue with remaining tests** — do NOT halt the suite
+      - Include blocked test details in the completion report
 
 **Architecture bug classification — distinguish test bugs from upstream bugs:**
 When a failure occurs, determine its origin before fixing:

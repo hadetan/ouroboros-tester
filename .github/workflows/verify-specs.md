@@ -39,15 +39,13 @@ For each section (or filtered by --section):
 2. Read section impl from `src/docs/{module}/{page}/sections/{section-slug}/impl.md`
 3. Navigate to the page and locate the section
 4. Spawn spec-verifier agent with both files and page context
-4. Agent performs goal-backward verification of every requirement
-5. Agent performs Framework & Locator Audit (Step A) — fills in `## UI Framework & Component Details` if missing
-6. Agent performs Layout Audit (Step B) — verifies modals/drawers vs viewport
-7. Agent performs Feedback Mechanism Audit (Step C) — verifies exact types, rejects generic "toast"
-8. Agent performs Mutation Side Effects Audit (Step D) — tests filter persistence after CRUD
+5. Agent performs recipe re-execution (reproduces every Interaction Recipe)
+6. Agent performs structural verification (CRUD, elements, containers, scenarios)
+7. Agent verifies API contracts via `api-probe verify-contract`
+8. Agent runs flow simulation (Create → Edit → Delete without refresh)
 9. Agent updates spec with verification status
-10. Agent writes verification notes
 
-**REJECTION CHECK:** Before marking verified, agent MUST confirm NONE of the rejection criteria are met (see agent definition). If any are met, agent fills in the missing data and marks `corrected: true`.
+**REJECTION CHECK:** Before marking verified, agent MUST confirm NONE of the rejection criteria are met (see spec-verifier agent). If any are met, agent fills in the missing data and marks `corrected: true`.
 </step>
 
 <step name="verify_relationships">

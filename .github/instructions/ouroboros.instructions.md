@@ -48,6 +48,24 @@ Commands are thin wrappers — all logic lives in shared files:
 
 **To update a command**: edit only the workflow/agent file in `.github/`. Both Claude and Copilot commands reference the same shared files — never duplicate workflow logic into command files.
 
+## Testing Scope Protocol
+
+Before starting work, read `.ouroboros/testing-scope.md` if it exists.
+
+- **"What to test" has entries:** Focus only on listed areas. Skip sections, operations, or interaction types not covered.
+- **"What not to test" has entries:** Explicitly skip listed areas. Do not explore, verify, or test them.
+- **Both empty or file missing:** Default behavior — process everything.
+- **Both have entries:** "What to test" narrows scope; "What not to test" removes items from that scope.
+
+**Test infrastructure vs test subject:** Scope exclusions apply to what agents ASSERT/TEST, not to infrastructure that supports testing. API helpers, auth, and cleanup utilities are always built regardless of scope.
+
+## Workspace Hygiene
+
+Agents must NEVER create temporary files, debug artifacts, or intermediate output files anywhere in the project tree:
+- No `.txt` dump files from `browser_evaluate` (use inline tool response output instead)
+- No scratch files in the project root, `.ouroboros/`, or anywhere else
+- Only write: spec files in `src/docs/`, page objects in `src/pages/`, tests in `src/tests/`, and state files (`STATE.md`, `DOMAIN-TREE.md`)
+
 ## Conventions
 
 1. **Specs use Given/When/Then scenarios** — Every requirement has testable scenarios

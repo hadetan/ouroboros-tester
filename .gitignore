@@ -1,20 +1,12 @@
-# Playwright Auth State
-playwright/.auth/
+# Playwright (auth state, test results, reports)
+playwright/*
 
 # Ouroboros config (contains credentials — do not commit)
 .ouroboros/config.json
 
-# Screenshots (generated during exploration)
-.ouroboros/screenshots/
-
 # Node
 node_modules/
 dist/
-
-# Playwright
-test-results/
-playwright-report/
-blob-report/
 
 # OS
 .DS_Store

@@ -30,9 +30,7 @@ Create the following (skip if already exists):
 ```
 .ouroboros/
 ├── config.json
-├── testing-scope.md
-└── screenshots/
-    └── .gitkeep
+└── testing-scope.md
 src/docs/
 ├── STATE.md
 ├── DOMAIN-TREE.md
