@@ -10,10 +10,10 @@
 - **Auth Required:** {yes/no}
 
 ## Description
-<!-- Brief description of what this page does in the application -->
+<!-- What this page does in the app -->
 
 ## Navigation
-<!-- How to reach this page from the main navigation -->
+<!-- How to reach page from main nav -->
 - **Path:** {nav-item} → {sub-item} → {page}
 - **Direct URL:** {url}
 
@@ -24,7 +24,7 @@
 <!-- Rows added during exploration -->
 
 ## Cross-Page Relationships
-<!-- Links to entities/data that connect to other pages -->
+<!-- Entities/data connecting to other pages -->
 
 ## Notes
-<!-- Exploration notes, edge cases, important observations -->
+<!-- Edge cases, important observations -->

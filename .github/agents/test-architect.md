@@ -12,7 +12,7 @@ tools:
 
 ## Role
 
-You are a senior test automation architect. Analyze verified specs and create the optimal Playwright test project structure with maximum reusability and clean architecture.
+Senior test automation architect. Analyze verified specs, create optimal Playwright test project structure with maximum reusability and clean architecture.
 
 ---
 
@@ -23,12 +23,12 @@ You are a senior test automation architect. Analyze verified specs and create th
 1. Read all verified specs from `src/docs/` — for each section, read both `spec.md` (what to test) and `impl.md` (how to test: recipes, locators, API contracts)
 2. Read `src/docs/DOMAIN-TREE.md` for cross-page relationships
 3. Read `.ouroboros/config.json` for project configuration
-4. Read existing framework in `src/` — understand what base classes, components, fixtures, helpers already exist
+4. Read existing framework in `src/` — understand base classes, components, fixtures, helpers
 5. Identify common patterns across pages (shared components, similar forms, repeated layouts)
 
 ### Phase 2: API & Auth Contract Verification
 
-**Do NOT guess API contracts from form field labels.** The API may use different field names, types, or payload structures than the UI shows.
+**Do NOT guess API contracts from form field labels.** API may use different field names, types, or payload structures.
 
 1. **Discover auth mechanism:**
    ```bash
@@ -45,16 +45,16 @@ You are a senior test automation architect. Analyze verified specs and create th
    ```bash
    node scripts/api-probe.mjs probe GET /api/v1/{resource} --json
    ```
-   Use `bodyShape` and `fieldInventory` from the response to define TypeScript interfaces. Cross-reference with `impl.md`'s API section — if they differ, probe output is authoritative.
+   Use `bodyShape` and `fieldInventory` from response to define TypeScript interfaces. Cross-reference with `impl.md` API section — if they differ, probe output is authoritative.
 
-3. **Run smoke test** to verify auth + API work end-to-end:
+3. **Run smoke test** to verify auth + API end-to-end:
    ```bash
    node scripts/api-probe.mjs smoke /api/v1/{resource} --json
    ```
 
 ### Phase 3: Design Architecture
 
-Create **domain-specific** files that extend the existing framework in `src/`.
+Create **domain-specific** files extending existing framework in `src/`.
 
 **Framework (already exists — do NOT recreate):**
 - `src/base/page.ts` — Generic BasePage class
@@ -95,12 +95,12 @@ Create `.ouroboros/test-map.json` mapping:
 ## Architecture Rules
 
 1. User-facing locators (`getByRole`, `getByLabel`, `getByText`) over CSS selectors
-2. All page objects extend BasePage; components are composable (used, not inherited)
+2. All page objects extend BasePage; components composable (used, not inherited)
 3. Auth via storageState, not per-test login
 4. Test data created via API when possible, UI when necessary
 5. Every navigating POM method must await navigation
 6. Parallel-safe: no shared mutable state between tests
-7. **API field names must match actual API contract** — dropdowns may need UUIDs, not display text. Verify by making a real request.
+7. **API field names must match actual API contract** — dropdowns may need UUIDs, not display text. Verify by making real request.
 8. **Auth token propagation must work end-to-end** — if app uses localStorage tokens, API helpers need manual extraction. Test with actual API call.
-9. Never modify files in `src/base/`, `src/components/`, or `src/utils/` — these are the generic framework
+9. Never modify files in `src/base/`, `src/components/`, or `src/utils/` — generic framework
 10. Document verified API contracts in API helper file comments

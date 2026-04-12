@@ -9,24 +9,22 @@
 ---
 
 ## UI Elements
-<!-- All interactive and display elements in this section -->
+<!-- Interactive and display elements in section -->
 
 ### Display Elements
-<!-- Tables, lists, cards, text blocks, charts, etc. -->
+<!-- Tables, lists, cards, text blocks, charts -->
 
 ### Interactive Elements
-<!-- Buttons, links, inputs, dropdowns, toggles, etc. -->
+<!-- Buttons, links, inputs, dropdowns, toggles -->
 
 ---
 
 ## UI Framework & Component Details
-<!-- CRITICAL: The test-writer agent depends entirely on this section to choose correct locator strategies.
-     Identify every UI library/framework used in this section by inspecting CSS classes and DOM structure.
-     For EACH component, document its type, framework, and any accessibility gaps. -->
+<!-- Identify every UI library/framework by inspecting CSS classes and DOM structure.
+     Document component type, framework, and accessibility gaps. -->
 
 ### Frameworks Detected
-<!-- List every UI framework/library identified in this section's DOM -->
-<!-- Examples: Framework A, Framework B, custom components -->
+<!-- UI frameworks identified in section DOM -->
 | Component | Framework | Version Hint | CSS Class Pattern |
 |-----------|-----------|-------------|-------------------|
 <!-- | Data grid | Grid Framework | grid-lib | `.grid-class`, `.cell-class`, `.filter-class` | -->
@@ -35,8 +33,7 @@
 <!-- | Toast/notification | UI Framework message | v4.x | `.message-notice-class` | -->
 
 ### Accessibility & Locator Notes
-<!-- Document ARIA role availability for each interactive component. This prevents the test-writer
-     from using getByRole() on elements that lack proper ARIA roles. -->
+<!-- ARIA role availability per component. Prevents test-writer from using getByRole() on elements without proper ARIA. -->
 | Component | Has Standard ARIA Roles? | Recommended Locator Strategy |
 |-----------|-------------------------|------------------------------|
 <!-- | Custom Select options | NO — uses custom divs, NOT `role="option"` | `page.locator('.select-item-class').filter({ hasText: 'value' })` | -->
@@ -45,7 +42,7 @@
 <!-- | Table rows | YES — `role="row"` available | `page.getByRole('row')` | -->
 
 ### Layout Constraints
-<!-- Document viewport/scroll requirements that affect test automation -->
+<!-- Viewport/scroll requirements affecting test automation -->
 - **Minimum viewport for full interaction:** {width}x{height} (e.g., 1280x1080)
 - **Modals/drawers exceeding default viewport:** {yes/no — if yes, list which ones and approximate height}
 - **Sections requiring scroll-to-view:** {list sections that are below the fold}
@@ -54,51 +51,29 @@
 ---
 
 ## Interaction Recipes
-<!-- CRITICAL CONTRACT: This section is the behavioral proof between explorer and test-writer.
-     For EVERY interactive component discovered, the explorer MUST:
-     1. PROVE the interaction works by executing it during exploration
-     2. Document the EXACT locator, method, and assertion that succeeded
-     3. Document any failed approaches (to prevent the test-writer from repeating mistakes)
-
-     The test-writer will implement these recipes EXACTLY as documented.
-     If an interaction is not documented here, the test-writer MUST report it as a gap.
-
-     COMPACT FORMAT: Each recipe keeps ALL actionable information in fewer lines.
-     - "Signal" = what DOM change proves success (prose). "Assert" = the Playwright code that verifies it.
-     - "Render" line is ONLY needed for conditionally rendered elements (omit for always-present elements).
-     - "Failed" line is ONLY needed when non-standard methods were required (omit when standard click/fill works).
-     - "Why This Method" explanation after Method is ONLY needed for non-standard methods.
-
-     One recipe per distinct interaction type found on the page.
-     Name each recipe after the user action: "Open Create Form", "Select Dropdown Value",
-     "Apply Column Filter", "Confirm Delete", "Navigate Pagination", "Close Modal", etc. -->
+<!-- Behavioral proof between explorer and test-writer.
+     Every interactive component: PROVE interaction works, document EXACT locator/method/assertion.
+     Document failed approaches to prevent test-writer repeating mistakes.
+     Target: one recipe per distinct interaction type. Name after user action. -->
 
 ### Recipe: {interaction-name}
-- **Locator:** `{exact locator expression that was tested and works}`
-- **Method:** `{click() | evaluate(el => el.click()) | fill('text') | nativeSetter('text') | selectOption('value') | etc.}`
-  {ONLY if non-standard: — "element outside viewport (y=-32005)" | "framework ignores fill events" | "no ARIA role on options" | etc.}
-- **Assert:** `{exact Playwright assertion command — e.g., await expect(page.locator('.{modal-class}')).toBeVisible()}`
-  <!-- If the obvious assertion fails, document: DON'T: {failing assertion} — DO: {working assertion} -->
-- **Signal:** {what observable DOM change confirms success — e.g., "modal with class '.{modal-class}' appears"} | **Timing:** {immediate | async ~Xms}
-- **Preconditions:** {what must be true — e.g., "grid loaded", "modal is open" | NONE}
-- **Render:** {state-bound | once-triggered} · Trigger: {action that causes element to appear} · Disappears: {condition}
-  <!-- OMIT this entire line for always-present elements. Include ONLY for conditionally rendered elements. -->
-- **Failed:** {1. click() → 'element outside viewport' (y=-32005). 2. fill('text') → value empty after fill.}
-  <!-- OMIT this line if standard approach worked on first try. -->
-
-<!-- Repeat ### Recipe: ... for each distinct interaction type.
-     Typical set for a CRUD section: Open Form, Fill Text Field, Fill Input (native setter),
-     Select Dropdown Value, Submit Form, Close Form (all close mechanisms),
-     Open Filter Dialog, Apply Filter, Clear Filter,
-     Click Row Action, Confirm Delete, Cancel Delete, Navigate Page, Find Row Across Pages -->
+- **Locator:** `{exact locator expression tested and working}`
+- **Method:** `{click() | evaluate(el => el.click()) | fill('text') | nativeSetter('text') | selectOption('value')}`
+  {ONLY if non-standard: reason}
+- **Assert:** `{exact Playwright assertion command}`
+  <!-- DON'T/DO notes if obvious assertion fails -->
+- **Signal:** {DOM change confirming success} | **Timing:** {immediate | async ~Xms}
+- **Preconditions:** {requirements | NONE}
+- **Render:** {state-bound | once-triggered} · Trigger: {action} · Disappears: {condition}
+  <!-- OMIT for always-present elements -->
+- **Failed:** {approaches tried and why they failed}
+  <!-- OMIT if standard approach worked -->
 
 ---
 
 ## Form Fields
-<!-- Detailed field documentation for CREATE/UPDATE forms.
-     CRITICAL: The Validation column must include ALL rules — not just "required".
-     Document format rules, min/max length, regex patterns, accepted domains, etc.
-     The test-writer will use this to generate valid test data. -->
+<!-- Field documentation for CREATE/UPDATE forms.
+     Validation column: ALL rules (required, format, min/max, regex, accepted domains). -->
 
 | Field | Type | Required | Validation | Default | Locator Strategy | Notes |
 |-------|------|----------|------------|---------|-----------------|-------|
@@ -107,11 +82,8 @@
 <!-- | {field-name} | textbox | yes | required, numeric, max 15 chars | "" | `getByLabel('{Field Name}')` | -->
 
 ## API Contracts
-<!-- Network requests captured during CRUD operations.
-     CRITICAL: The test-architect uses this table to build API helpers and data factories.
-     Capture ACTUAL response shapes — do not guess from form labels.
-     Field names must match the API exactly (camelCase, PascalCase, UUIDs vs display names).
-     Use `node scripts/api-probe.mjs probe GET /api/v1/{resource} --json` to verify shapes. -->
+<!-- Network requests captured during CRUD. Use actual response shapes, not guesses.
+     Field names must match API exactly (camelCase, PascalCase, UUIDs vs display names). -->
 
 | Operation | Method | Endpoint | Request Payload (key fields) | Response Shape | Status | Auth |
 |-----------|--------|----------|------------------------------|---------------|--------|------|
@@ -121,8 +93,7 @@
 <!-- | Delete | DELETE | /api/v1/entities/{id} | — | `{}` | 200 | Bearer | -->
 
 ### Field Name Mappings
-<!-- CRITICAL: Document where API field names differ from UI form labels.
-     The architect MUST use API field names (not UI labels) in helpers and data factories. -->
+<!-- Where API field names differ from UI labels. Architect uses API names in helpers. -->
 | UI Label | API Field Name | Type | Notes |
 |----------|---------------|------|-------|
 <!-- | {UI Dropdown Label} (shows display text) | {apiFieldId} | UUID string | Dropdown shows "{Display Text}" but API expects "{uuid-...}" | -->
@@ -131,9 +102,8 @@
 ---
 
 ## Mutation Side Effects
-<!-- CRITICAL: Document what happens to the UI AFTER a successful create/update/delete.
-     The test-writer needs this to write correct post-mutation assertions.
-     These observations come from DOM Diff snapshots taken before and after each mutation. -->
+<!-- UI changes AFTER successful create/update/delete. Test-writer uses for post-mutation assertions.
+     From DOM diff snapshots before and after each mutation. -->
 | Operation | Filters Preserved? | Pagination State | Alert Text | Alert Persists? | Other Side Effects |
 |-----------|-------------------|-----------------|------------|----------------|-------------------|
 <!-- | Create | ✓ Yes | Stays on current page; new record on page N (alphabetical by Name) | "Entity created successfully" | ✅ Yes — does not auto-dismiss | Modal closes automatically | -->
@@ -141,16 +111,15 @@
 <!-- | Delete | ❌ No — all column filters cleared | Stays on current page; total count decreases by 1 | "Entity removed successfully" | ✅ Yes | Popconfirm disappears | -->
 
 ## Feedback Mechanisms
-<!-- CRITICAL: Document the EXACT type and locator for every success/error feedback element.
-     Do NOT use generic terms like "toast" — specify the exact implementation. -->
+<!-- Exact type and locator for every success/error feedback element.
+     No generic "toast" — specify exact implementation. -->
 | Trigger | Feedback Type | Locator | Exact Message Text | Auto-Dismisses? | Assertion Command |
 |---------|--------------|---------|-------------------|-----------------|-------------------|
 <!-- | Create success | role="alert" banner (.{framework-alert-class}) | `page.getByRole('alert')` | "Entity created successfully" | No — persists until next mutation | `await expect(page.getByRole('alert')).toContainText('created successfully')` | -->
 <!-- | Validation error | Inline error (.{framework-error-class}) | `page.locator('.{framework-error-class}')` | Per-field — see Form Fields table | No — persists until corrected | `await expect(page.locator('.{framework-error-class}')).toHaveCount(N)` | -->
 
 ## Create vs Edit Form Differences
-<!-- CRITICAL: Document which fields differ between Create and Edit mode.
-     The test-writer uses this to write correct assertions for edit form state. -->
+<!-- Fields that differ between Create and Edit mode. -->
 | Field | In Create Form? | In Edit Form? | Edit Behavior |
 |-------|----------------|--------------|---------------|
 <!-- | {field-name} | ✅ enabled | ✅ DISABLED (readonly) | Pre-filled, cannot be changed | -->
@@ -158,8 +127,7 @@
 <!-- | {field-name} | ❌ hidden | ✅ Conditional — shown when {other-field} = "{value}" | -->
 
 ## Concurrency & Timing Notes
-<!-- Document interactions that are timing-sensitive and could cause flaky tests.
-     Include recommended wait strategies. -->
+<!-- Timing-sensitive interactions that could cause flaky tests. Include wait strategies. -->
 <!--
 - **After modal close:** Wait for the modal element to disappear from DOM before interacting with grid elements (overlay may intercept clicks)
 - **Multiple confirm dialogs:** After cancel + re-click delete, multiple confirmation elements may coexist in DOM. Target the VISIBLE one using `getBoundingClientRect().height > 0`.

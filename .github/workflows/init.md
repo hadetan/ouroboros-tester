@@ -6,23 +6,21 @@ description: "Initializes Ouroboros Tester for a new domain: config, templates, 
 # Initialize Ouroboros Tester Workflow
 
 ## Purpose
-Set up the `.ouroboros/` directory and `src/docs/` with configuration, templates, and initial state for automated domain testing.
+Set up `.ouroboros/` and `src/docs/` with configuration, templates, and initial state.
 
 ## Arguments
-- `base-url` (required): Root URL of the website to test
+- `base-url` (required): Root URL of website to test
 - `--name` (optional): Human-readable project name
 
 ## Process
 
 <step name="gather_info">
-Ask the user for any details not provided in arguments:
-1. **Base URL** — Root URL of the website (e.g., `https://app.example.com`)
+Ask user for details not in arguments:
+1. **Base URL** — Root URL (e.g., `https://app.example.com`)
 2. **Project Name** — Human-readable name (e.g., "Example CRM")
-3. **Authentication** — Does the site require login?
-   - If yes: Login URL, username, password
-   - Credentials go in config (add `.ouroboros/config.json` to `.gitignore`)
-4. **Roles** — Are there multiple user roles to test? (admin, user, etc.)
-5. **API Base URL** — If there's an API for test data setup (optional)
+3. **Authentication** — Login required? If yes: login URL, username, password (credentials go in config, gitignored)
+4. **Roles** — Multiple user roles? (admin, user, etc.)
+5. **API Base URL** — For test data setup (optional)
 </step>
 
 <step name="create_directories">
@@ -39,9 +37,9 @@ src/docs/
 </step>
 
 <step name="create_config">
-Write `.ouroboros/config.json` using the template at `templates/config.template.json` as a reference. Fill in gathered information.
+Write `.ouroboros/config.json` using `templates/config.template.json` as reference. Fill in gathered info.
 
-Write `.ouroboros/testing-scope.md` using the template at `templates/testing-scope.md`. Copy it as-is — the user will edit it later to customize what agents test and skip.
+Write `.ouroboros/testing-scope.md` from `templates/testing-scope.md`. Copy as-is — user edits later to customize scope.
 </step>
 
 <step name="initialize_state">
@@ -79,8 +77,8 @@ Ensure `.ouroboros/config.json` and `playwright/.auth/` are in `.gitignore`.
 </step>
 
 <step name="report">
-Confirm initialization is complete and suggest the next step:
+Confirm initialization complete. Suggest next step:
 → `/orb-explore <first-page-url> --name "<Page Name>" --auth`
 
-Also mention: Edit `.ouroboros/testing-scope.md` to customize what agents should test or skip.
+Mention: Edit `.ouroboros/testing-scope.md` to customize what agents test or skip.
 </step>

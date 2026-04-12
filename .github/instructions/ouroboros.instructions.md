@@ -50,21 +50,24 @@ Commands are thin wrappers — all logic lives in shared files:
 
 ## Testing Scope Protocol
 
-Before starting work, read `.ouroboros/testing-scope.md` if it exists.
+Read `.ouroboros/testing-scope.md` before ANY agent work. Scope is a hard constraint, not a suggestion.
 
-- **"What to test" has entries:** Focus only on listed areas. Skip sections, operations, or interaction types not covered.
-- **"What not to test" has entries:** Explicitly skip listed areas. Do not explore, verify, or test them.
+- **"What to test" has entries:** Only explore/verify/test listed operations. Everything else is invisible — don't touch it.
+- **"What not to test" has entries:** Never explore, trigger, document, or test listed items. Not even as part of another operation.
 - **Both empty or file missing:** Default behavior — process everything.
 - **Both have entries:** "What to test" narrows scope; "What not to test" removes items from that scope.
+
+**Feedback signals (toasts, banners, alerts):** Part of a scoped operation's assertion — not standalone test cases or standalone spec scenarios.
 
 **Test infrastructure vs test subject:** Scope exclusions apply to what agents ASSERT/TEST, not to infrastructure that supports testing. API helpers, auth, and cleanup utilities are always built regardless of scope.
 
 ## Workspace Hygiene
 
-Agents must NEVER create temporary files, debug artifacts, or intermediate output files anywhere in the project tree:
-- No `.txt` dump files from `browser_evaluate` (use inline tool response output instead)
-- No scratch files in the project root, `.ouroboros/`, or anywhere else
-- Only write: spec files in `src/docs/`, page objects in `src/pages/`, tests in `src/tests/`, and state files (`STATE.md`, `DOMAIN-TREE.md`)
+`playwright/trash/` is the designated temp directory for browser data offloading (snapshots, evaluates, network captures). Files there overwrite each other by design and are gitignored.
+
+Agents must NEVER create temporary files anywhere else in the project tree:
+- No scratch files in project root, `.ouroboros/`, `src/docs/`, or anywhere outside `playwright/trash/`
+- Only write permanent files to: `src/docs/` (specs), `src/pages/` (POMs), `src/tests/` (tests), `src/fixtures/`, `src/helpers/`, and state files (`STATE.md`, `DOMAIN-TREE.md`)
 
 ## Conventions
 

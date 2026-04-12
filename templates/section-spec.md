@@ -13,13 +13,13 @@
 - **Corrected:** false
 
 ## Description
-<!-- What this section does, its purpose in the page -->
+<!-- Section purpose on page -->
 
 ## Location on Page
-<!-- Where this section appears on the page -->
+<!-- Section position and visibility -->
 - **Position:** {top/middle/bottom/sidebar/modal}
 - **Visibility:** {always-visible/tab/accordion/scroll-to}
-- **Container:** {selector-hint for the section boundary}
+- **Container:** {selector-hint for section boundary}
 
 ---
 
@@ -97,21 +97,19 @@ The system SHALL allow users to delete an existing {entity}.
 ---
 
 ## States
-<!-- Different visual states of the section -->
 
 ### Loading State
-<!-- What the section looks like while data loads -->
+<!-- Appearance during data load -->
 
 ### Empty State
-<!-- What the section looks like with no data -->
+<!-- Appearance with no data -->
 
 ### Error State
-<!-- What the section looks like when an error occurs -->
+<!-- Appearance on error -->
 
 ---
 
 ## Cross-Page References
-<!-- Entities created here that appear elsewhere, or entities from elsewhere used here -->
 <!-- Format:
 - **Creates:** {entity} → used in {page}/{section}
 - **Consumes:** {entity} ← created in {page}/{section}
