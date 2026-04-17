@@ -1,519 +1,386 @@
-<p align="center">
-  <img src="assets/ouroboros-banner.png" alt="Ouroboros Tester" width="100%">
-</p>
+<div align="center">
 
-<p align="center">
-  <strong>AI-driven domain test automation for any web application.</strong>
-</p>
+# OUROBOROS TESTER
 
-<p align="center">
-  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" /></a>
-  <a href="https://playwright.dev"><img alt="Playwright" src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" /></a>
-  <a href="https://www.typescriptlang.org"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" /></a>
-  <!-- <a href="https://www.npmjs.com/package/ouroboros-tester"><img alt="npm version" src="https://img.shields.io/npm/v/ouroboros-tester?style=flat-square" /></a> -->
-</p>
+**AI-driven domain test automation with Playwright**
 
-<p align="center">
-  Point at a URL. Get verified specs and a complete Playwright test suite.<br>
-  No manual test writing. No guessing at selectors. No stale documentation.
-</p>
+[![npm version](https://img.shields.io/npm/v/ouroboros-tester?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/ouroboros-tester)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Playwright](https://img.shields.io/badge/Playwright-%3E%3D1.40-45ba4b?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev)
 
-<p align="center">
-  <a href="#quick-start">Quick Start</a> · <a href="#how-it-works">How It Works</a> · <a href="#commands">Commands</a> · <a href="#agents">Agents</a> · <a href="ARCHITECTURE.md">Architecture</a>
-</p>
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Commands](#commands) · [Architecture](#architecture) · [CLI Reference](#cli-reference)
+
+</div>
+
+---
+
+## What is this?
+
+You point it at a web app. AI agents explore, document, and write Playwright tests — automatically.
+
+```text
+You: /orb-explore https://app.example.com/products --name "Products"
+AI:  Navigating https://app.example.com/products...
+     ✓ Discovered 4 sections: listing, detail, create, filters
+     ✓ Documented 23 requirements with Given/When/Then scenarios
+     ✓ Captured API contracts, locators, and interaction recipes
+     ✓ Specs written to src/docs/products/
+
+You: /orb-verify products
+AI:  Re-crawling to verify spec accuracy...
+     ✓ 23/23 requirements verified against live page
+     ✓ All interaction recipes re-executed successfully
+
+You: /orb-architect
+AI:  ✓ Generated ProductsPage (POM) with section methods
+     ✓ Created test fixtures and data factory
+     ✓ Set up API helper for test data lifecycle
+
+You: /orb-write-tests products
+AI:  ✓ Written 18 test cases across 4 spec files
+     ✓ All tests use Page Object Model pattern
+     ✓ Test data managed via API (create → test → cleanup)
+```
+
+No manual test writing. No guessing at selectors. Every test is backed by a verified spec that was proven against the live application.
 
 ---
 
 ## The Problem
 
-Writing E2E tests for a web application is slow, tedious, and the tests go stale the moment the UI changes. You spend hours inspecting elements, writing page objects, and maintaining specs that nobody reads.
+Writing end-to-end tests is tedious:
 
-Ouroboros Tester eliminates all of that. Four AI agents — backed by Playwright MCP — explore your application, document what they find as verified specs, generate the entire test infrastructure, and write comprehensive test suites. You just point them at a URL.
+- **Exploring the app** — clicking through every page, every state, every edge case
+- **Finding selectors** — inspecting DOM, guessing at stable locators, hoping they don't break
+- **Writing page objects** — boilerplate for every page, every component, every interaction
+- **Maintaining tests** — specs drift from reality, tests break, nobody knows why
 
-```text
-→ spec-first, not test-first
-→ verified against live UI, not assumed
-→ generated from evidence, not guesses
-→ one command to go from URL to test suite
-```
+Most teams either skip E2E tests entirely or write fragile ones that cost more to maintain than they save.
 
----
+## The Solution
 
-## See It in Action
+Ouroboros Tester flips the process. Instead of humans writing tests from memory, AI agents **explore the live application**, **document what they find as verified specs**, and then **generate test infrastructure and test cases** from those specs.
 
-```text
-You: /orb-explore https://app.example.com/users --name "User Management"
-AI:  🔍 Navigating to /users...
-     Found 4 sections: user-table, create-form, edit-form, filters
-     Documenting CRUD operations...
-     ✓ src/docs/users/sections/user-table/spec.md     (12 scenarios)
-     ✓ src/docs/users/sections/create-form/spec.md    (8 scenarios)
-     ✓ src/docs/users/sections/edit-form/spec.md      (6 scenarios)
-     ✓ src/docs/users/sections/filters/spec.md        (4 scenarios)
-     Validation passed. Ready for verification.
-
-You: /orb-verify users
-AI:  Re-crawling /users with goal-backward verification...
-     ✓ "Can a user create a new record?"  — confirmed
-     ✓ "Can a user edit an existing record?" — confirmed
-     ✗ "Does the delete button show a confirmation?" — spec said modal, actual is inline confirm
-     Fixed spec. All 30 scenarios verified.
-
-You: /orb-architect
-AI:  Analyzing verified specs...
-     ✓ src/pages/users.page.ts                (POM with 14 methods)
-     ✓ src/fixtures/test.fixture.ts           (domain fixture)
-     ✓ src/helpers/data-factory.ts            (user data generators)
-     Architecture validated.
-
-You: /orb-write-tests users
-AI:  Writing tests from verified specs...
-     ✓ src/tests/users/user-table.spec.ts     (12 tests)
-     ✓ src/tests/users/create-form.spec.ts    (8 tests)
-     ✓ src/tests/users/edit-form.spec.ts      (6 tests)
-     ✓ src/tests/users/filters.spec.ts        (4 tests)
-     30 tests written. 28 passing, 2 need data setup.
-```
-
-Or run the full pipeline in one shot:
-
-```
-/orb-run https://app.example.com/users --name "User Management"
-```
+Every spec entry is backed by **executed Playwright evidence** — the agent actually clicked the button, filled the form, observed the response. Nothing is assumed.
 
 ---
 
 ## Quick Start
 
-**Requires Node.js 20+ and VS Code with GitHub Copilot Chat.**
+**Requires Node.js 20+ and an AI coding assistant** (GitHub Copilot or Claude Code).
 
-### 1. Install
+### Install
 
 ```bash
-npm install
-npx playwright install chromium
+npm install -g ouroboros-tester
 ```
 
-### 2. Configure Playwright MCP
+### Scaffold a project
 
-Add to your VS Code MCP settings (`~/Library/Application Support/Code/User/mcp.json` on macOS):
-
-```json
-{
-  "servers": {
-    "microsoft/playwright-mcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
+```bash
+mkdir my-app-tests && cd my-app-tests
+orb init https://your-app.com
 ```
 
-### 3. Initialize for your domain
+This creates a fully configured test project:
 
 ```
-/orb-init
+my-app-tests/
+├── .ouroboros/config.json          ← Project config (base URL, auth)
+├── .ouroboros/testing-scope.md     ← Define what to test / skip
+├── .github/agents/                 ← AI agent definitions
+├── .github/prompts/                ← Slash commands for your AI assistant
+├── scripts/                        ← API probe, spec validators
+├── src/                            ← Your test code lives here
+├── package.json
+└── tsconfig.json
 ```
 
-The agent asks for your base URL, project name, and auth details. Creates `.ouroboros/config.json` and all required directories.
+### Run the pipeline
 
-### 4. Explore → Verify → Architect → Test
+Open the project in VS Code with GitHub Copilot (or Claude Code) and use slash commands:
 
 ```
-/orb-explore https://app.example.com/users --name "User Management"
-/orb-verify users
+/orb-explore https://your-app.com/dashboard --name "Dashboard"
+/orb-verify dashboard
 /orb-architect
-/orb-write-tests users
+/orb-write-tests dashboard
 ```
 
-### 5. Run the tests
+Or run the full pipeline in one shot:
+
+```
+/orb-run https://your-app.com/dashboard --name "Dashboard"
+```
+
+### Run your tests
 
 ```bash
-npm test                    # headless
-npm run test:headed         # with browser visible
+npm test                    # Headless
+npm run test:headed         # With browser visible
 npm run test:ui             # Playwright UI mode
-npm run test:debug          # step-through debugger
-npm run test:report         # open HTML report
+npm run test:debug          # Step-through debugger
 ```
 
 ---
 
 ## How It Works
 
-Four agents form a pipeline. Each reads the output of the previous one, and quality gates between stages ensure nothing moves forward without validation.
+Four specialized AI agents form a pipeline. Each agent has a defined role, reads/writes specific files, and must pass a quality gate before the next agent runs.
 
 ```
-  /orb-explore       /orb-verify        /orb-architect     /orb-write-tests
-       |                  |                   |                  |
-       v                  v                   v                  v
-  +----------+       +----------+       +----------+       +----------+
-  |  crawl-  | ----> |  spec-   | ----> |  test-   | ----> |  test-   |
-  |  explorer|       |  verifier|       |  architect|       |  writer  |
-  +----------+       +----------+       +----------+       +----------+
-       |                  |                   |                  |
-   Discovers          Validates          Generates           Writes
-   sections &         every claim        POM, fixtures,      test
-   CRUD ops           against live UI    components          suites
-       |                  |                   |                  |
-       v                  v                   v                  v
-   src/docs/          src/docs/          src/pages/          src/tests/
-   (raw specs)        (verified specs)   src/fixtures/       (*.spec.ts)
-                                         src/helpers/
-       '                  '                   '
-       +-- validate-spec.mjs -+   validate-architecture.mjs
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│  crawl-      │    │  spec-       │    │  test-        │    │  test-        │
+│  explorer    │ →  │  verifier    │ →  │  architect    │ →  │  writer       │
+│              │    │              │    │               │    │               │
+│  Explore &   │    │  Re-crawl &  │    │  Generate     │    │  Write test   │
+│  document    │    │  verify      │    │  POM/fixtures │    │  cases        │
+└──────┬───────┘    └──────┬───────┘    └──────┬────────┘    └──────┬────────┘
+       │                   │                   │                    │
+       ▼                   ▼                   ▼                    ▼
+   src/docs/           src/docs/          src/pages/           src/tests/
+   (specs)             (verified)         src/fixtures/        (*.spec.ts)
 ```
 
-**Key insight:** The spec-verifier doesn't trust the explorer. It re-crawls every page and asks "can a user *actually* do this?" — not "did the explorer document this?". Specs that fail verification are corrected on the spot.
+### Stage 1: Explore
+
+The **crawl-explorer** agent navigates the target page using Playwright MCP. It discovers sections, interacts with every element, and documents findings as structured specs.
+
+Every interaction is proven with executable evidence:
+- **Element Proof Protocol** — locator verified to resolve exactly one element
+- **DOM Diffing** — before/after snapshots prove the interaction caused the expected change
+- **Assertion Dry Runs** — the assertion that will appear in the test is executed live
+
+Produces two files per section:
+- `spec.md` — Requirements with Given/When/Then scenarios (the "what to test")
+- `impl.md` — Locators, interaction recipes, API contracts (the "how to test")
+
+### Stage 2: Verify
+
+The **spec-verifier** agent re-crawls the page independently. It re-executes every interaction recipe, verifies API contracts against live endpoints, and runs flow simulations (full CRUD chains). Incorrect specs are fixed. Accurate ones are marked verified.
+
+### Stage 3: Architect
+
+The **test-architect** agent reads verified specs and generates the test infrastructure:
+- **Page Object Models** — one per page, with methods mapped to interaction recipes
+- **Test fixtures** — Playwright fixtures for dependency injection
+- **Data factory** — generates test data with unique values
+- **Constants** — routes, validation messages, field mappings
+
+### Stage 4: Write Tests
+
+The **test-writer** agent writes Playwright test cases from verified specs using the architecture from stage 3. Tests follow the POM pattern, use API helpers for data setup, and include proper assertions.
+
+### Quality Gates
+
+Each stage has a validation script that must pass before handoff:
+
+| Gate | Script | Validates |
+|------|--------|-----------|
+| After explore | `validate-spec.mjs` | Spec completeness, required sections, scenario format |
+| After verify | `validate-spec.mjs` | Stricter rules, verification status |
+| After architect | `validate-architecture.mjs` | POM/fixture/helper integrity |
 
 ---
 
 ## Commands
 
-All commands are VS Code slash commands. Type `/orb` to see them.
+All commands work in both GitHub Copilot and Claude Code.
 
-| Command | Arguments | What it does |
-|---------|-----------|--------------|
-| `/orb-init` | `<base-url>` | Initialize project for a domain |
-| `/orb-explore` | `<url> --name "<name>" [--auth]` | Explore a page, document all sections as specs |
-| `/orb-verify` | `<page-slug> [--section <slug>]` | Verify spec accuracy against the live site |
-| `/orb-architect` | `[--force]` | Generate test infrastructure from verified specs |
-| `/orb-write-tests` | `<page-slug> [--section <slug>]` | Write test cases from verified specs |
-| `/orb-status` | `[--page <slug>]` | Show progress dashboard |
-| `/orb-run` | `<url> --name "<name>" [--auth]` | Full pipeline: explore → verify → architect → write |
+### Pipeline
 
----
+| Command | What it does |
+|---------|--------------|
+| `/orb-init <url>` | Initialize project configuration and state files |
+| `/orb-explore <url> --name "<name>"` | Explore a page, discover sections, write specs |
+| `/orb-verify <page-slug>` | Verify spec accuracy by re-crawling |
+| `/orb-architect` | Generate POM, fixtures, helpers from verified specs |
+| `/orb-write-tests <page-slug>` | Write test cases from verified specs |
+| `/orb-run <url> --name "<name>"` | Full pipeline: explore → verify → architect → write |
+| `/orb-status` | Show progress dashboard |
 
-## Agents
+### Options
 
-Each agent is a VS Code custom agent mode with tools restricted to its role.
-
-### crawl-explorer
-
-Navigates to the target URL using Playwright MCP. Discovers every section of the page — tables, forms, modals, filters. Tests valid and invalid data paths. Captures network requests and validation rules. Every interaction is backed by executable evidence (Element Proof Protocol, DOM Diffing, Assertion Dry Runs).
-
-**Output:** Structured specs in `src/docs/` with Given/When/Then scenarios
-
-### spec-verifier
-
-Re-crawls pages documented by the explorer using **goal-backward verification**. Re-executes every Interaction Recipe, verifies API contracts against live endpoints, and runs full CRUD chain simulations. Corrects inaccuracies and marks specs as verified.
-
-**Output:** Verified specs in `src/docs/` — the single source of truth
-
-### test-architect
-
-Reads verified specs and designs the entire test project. Analyzes cross-page patterns to identify shared components. Generates POM classes, fixtures, component objects, helpers, data factories, and API utilities.
-
-**Output:** Complete test infrastructure in `src/pages/`, `src/fixtures/`, `src/helpers/`
-
-### test-writer
-
-Reads verified specs and the generated architecture. Writes comprehensive test suites covering every documented CRUD operation, including cross-page relationship tests. Follows a structured Failure Diagnosis Protocol — max 3 retries per test before escalating.
-
-**Output:** Test files in `src/tests/{module}/{page}/{section}.spec.ts`
+| Flag | Used with | Description |
+|------|-----------|-------------|
+| `--auth` | `explore`, `init` | Enable authentication setup |
+| `--section <slug>` | `verify` | Verify a specific section only |
+| `--force` | `architect` | Regenerate architecture even if it exists |
 
 ---
 
-## Spec Format
+## Architecture
 
-Every section produces **two files** — the "what" and the "how":
+### What ships in the npm package
 
-| File | Contains | Used by |
-|------|----------|---------|
-| `spec.md` | Requirements, Given/When/Then scenarios, states | test-writer (test structure) |
-| `impl.md` | Locators, Interaction Recipes, API contracts, field mappings | test-architect + test-writer (implementation) |
+The package provides reusable test infrastructure that domain-specific code builds on:
 
-```markdown
-## Requirements
+| Export | Purpose |
+|--------|---------|
+| `BasePage` | Base class for all Page Object Models |
+| `TableComponent` | Reusable table interactions (sort, filter, paginate) |
+| `FormComponent` | Form fill, submit, validation |
+| `ModalComponent` | Modal open, close, confirm |
+| `NavigationComponent` | Nav menu, breadcrumb, tabs |
+| `ToastComponent` | Toast/notification assertions |
+| `createBaseFixtures` | Fixture factory for Playwright tests |
+| `DataManager` | Test data lifecycle (track, create, cleanup) |
+| `APIHelper` | Authenticated API calls for data setup |
+| `AssertionHelper` | Common assertion patterns |
+| `loadConfig` | Load `.ouroboros/config.json` |
 
-### Requirement: User Creation
-The system SHALL allow admins to create a new user via the creation form.
+### What agents generate per-project
 
-#### Scenario: Successful creation with valid data
-- GIVEN the user is on the User Management page
-- AND the Create User section is visible
-- WHEN the user clicks "Add User"
-- AND fills in Name, Email, and Role with valid values
-- AND clicks "Save"
-- THEN a new user is created
-- AND a success toast "User created successfully" is displayed
-- AND the new user appears in the users table
+| Directory | Contents |
+|-----------|----------|
+| `src/docs/` | Specs (`spec.md` + `impl.md`), `STATE.md`, `DOMAIN-TREE.md` |
+| `src/pages/` | Page Object Models (one per URL path) |
+| `src/fixtures/` | Domain test fixture extending base |
+| `src/helpers/` | Constants, data factory |
+| `src/tests/` | Test files, Playwright config, auth setup |
 
-#### Scenario: Validation error on missing required field
-- GIVEN the user is on the Create User form
-- WHEN the user leaves Email empty
-- AND clicks "Save"
-- THEN a validation error "Email is required" is displayed
-- AND the form is not submitted
-```
+### File Organization
 
----
-
-## Test Architecture
-
-Everything lives in `src/`. The test-architect generates a complete Playwright project from verified specs.
-
-| Pattern | Purpose |
-|---------|---------|
-| **Page Object Model** | Each page gets a class encapsulating its interactions |
-| **Component Objects** | Reusable UI components (table, form, modal, toast, navigation) shared across pages |
-| **Fixture-based DI** | Pages, data managers, and config injected via Playwright fixtures |
-| **Data Factory** | Domain-aware test data generators built from field definitions in specs |
-| **API Helper** | Direct backend API calls for fast test data setup/teardown |
-| **Auth via storageState** | Authenticate once per worker, share session across all tests |
-
-```typescript
-import { test, expect } from '../../../fixtures/test.fixture';
-
-test('should create a user', async ({ page, usersPage, dataManager }) => {
-  const user = dataManager.generate.user();
-  await usersPage.createUser(user);
-  await expect(page.getByText(user.firstName)).toBeVisible();
-});
-```
-
----
-
-## Project Structure
-
-```
-ouroboros-tester/
-├── src/                              # Everything lives here
-│   ├── base/page.ts                  # BasePage class
-│   ├── fixtures/                     # Auth setup, data manager, domain fixture
-│   │   ├── base.fixture.ts
-│   │   ├── auth.setup.ts
-│   │   ├── data.fixture.ts
-│   │   └── test.fixture.ts
-│   ├── helpers/                      # API helper, constants, data factory
-│   │   ├── api.helper.ts
-│   │   ├── constants.ts
-│   │   └── data-factory.ts
-│   ├── utils/config.ts               # Config loader (.ouroboros/)
-│   ├── pages/                        # Generated page objects (POMs)
-│   ├── docs/                         # Generated specs (spec.md + impl.md)
-│   │   ├── STATE.md                  # Progress tracking
-│   │   ├── DOMAIN-TREE.md            # Cross-page entity relationships
-│   │   └── {module}/{page}/sections/
-│   └── tests/                        # Generated test cases
-│       ├── playwright.config.ts
-│       ├── fixtures/auth.setup.ts    # Auth setup for test runner
-│       └── {module}/{page}/{section}.spec.ts
-│
-├── .github/
-│   ├── agents/                       # Agent definitions (source of truth)
-│   ├── prompts/                      # VS Code Copilot slash commands
-│   ├── workflows/                    # Workflow orchestration
-│   └── instructions/                 # Project-wide instructions
-│
-├── .claude/commands/                 # Claude Code slash commands
-│
-├── .ouroboros/                       # Runtime config (gitignored)
-│   ├── config.json                   # Project configuration
-│   ├── testing-scope.md              # What to test / what to skip
-│   └── test-map.json                 # Spec-to-test mapping
-│
-├── playwright/
-│   ├── .auth/                        # Stored auth sessions
-│   └── trash/                        # Temp browser data (gitignored)
-│
-├── scripts/                          # Validation & API utilities
-│   ├── validate-spec.mjs            # Quality gate: spec completeness
-│   ├── validate-architecture.mjs    # Quality gate: POM/fixture integrity
-│   └── api-probe.mjs                # Auth, API probing, ad-hoc browser exec
-│
-├── templates/                        # Scaffolding templates
-├── AGENTS.md                         # Agent overview
-├── ARCHITECTURE.md                   # System architecture
-├── CLAUDE.md                         # Claude Code guidance
-├── tsconfig.json
-└── tsconfig.build.json
-```
-
-<details>
-<summary><strong>URL-Based Folder Convention</strong></summary>
-
-Pages and tests mirror the application's URL structure. Each path segment is kebab-cased. Query-parameter tabs become sections within the page folder.
+URL paths map directly to folder structure:
 
 ```
 URL: /CategoryName/SubPage?tab=listing
+
   → src/docs/category-name/sub-page/sections/listing/spec.md
   → src/docs/category-name/sub-page/sections/listing/impl.md
   → src/pages/category-name/sub-page.page.ts
   → src/tests/category-name/sub-page/listing.spec.ts
 ```
 
-</details>
+### Key Patterns
+
+| Pattern | Why |
+|---------|-----|
+| **Page Object Model** | Encapsulate page interactions in reusable classes |
+| **Fixture-based DI** | Inject pages, data, config via Playwright fixtures |
+| **Component objects** | Reusable UI abstractions (table, form, modal) |
+| **API helpers for data** | Fast setup/teardown via direct API calls, not UI navigation |
+| **Auth via storageState** | Authenticate once, share session across workers |
+| **User-facing locators** | `getByRole()`, `getByLabel()`, `getByText()` over CSS selectors |
 
 ---
 
-## Configuration
+## CLI Reference
 
-`.ouroboros/config.json` controls all agent behavior:
+### `orb init <base-url>`
+
+Scaffold a new test project targeting a web application.
+
+```bash
+orb init https://app.example.com
+orb init https://app.example.com --name "My App Tests"
+orb init https://app.example.com --auth              # Enable auth setup
+orb init https://app.example.com --dir ./tests        # Custom directory
+orb init https://app.example.com --skip-install       # Skip npm install
+```
+
+**What it creates:**
+- `package.json` with `ouroboros-tester` as a dependency
+- `.ouroboros/config.json` with base URL and project settings
+- `.ouroboros/testing-scope.md` for defining what to test
+- `tsconfig.json` configured for the project
+- Agent definitions, prompts, and workflow files
+- Validation scripts
+
+### Configuration
+
+Project settings live in `.ouroboros/config.json` (gitignored — may contain credentials):
 
 ```json
 {
   "project": {
-    "name": "My App",
-    "baseUrl": "https://app.example.com",
-    "apiBaseUrl": "https://api.example.com"
+    "name": "my-app-tests",
+    "baseUrl": "https://app.example.com"
   },
   "auth": {
     "required": true,
     "loginUrl": "https://app.example.com/login",
-    "credentials": {
-      "default": { "username": "...", "password": "..." }
-    },
-    "storageStatePath": "playwright/.auth/storage-state.json"
-  },
-  "exploration": {
-    "screenshotOnAction": true,
-    "captureNetworkRequests": true,
-    "maxSectionsPerPage": 50,
-    "waitTimeout": 5000
-  },
-  "testing": {
-    "outputDir": "src/tests",
-    "browsers": ["chromium"],
-    "parallel": true,
-    "retries": 1,
-    "traceOnFailure": true
+    "username": "test@example.com",
+    "password": "..."
   }
 }
 ```
 
-> [!IMPORTANT]
-> Add `.ouroboros/config.json` to `.gitignore` if it contains credentials. Use environment variables for CI:
-> ```bash
-> TC_USERNAME=... TC_PASSWORD=... npm test
-> ```
-
 ### Testing Scope
 
-`.ouroboros/testing-scope.md` lets you define what agents should and shouldn't test. Scope is a hard constraint — agents treat it as law.
+Control what agents explore and test via `.ouroboros/testing-scope.md`:
 
-- **"What to test" has entries:** Only those operations are explored, verified, and tested.
-- **"What not to test" has entries:** Those items are invisible to all agents.
-- **Both empty or missing:** Agents process everything they find.
+```markdown
+## What to test
+- Product listing CRUD operations
+- User profile settings
+
+## What not to test
+- Admin panel
+- Billing/payment flows
+```
+
+Scope is a hard constraint — agents will not explore, document, or test anything excluded.
 
 ---
 
-## Domain Tree
+## Validation Scripts
 
-As the explorer discovers that entities created on one page appear on another, it maps those relationships in `src/docs/DOMAIN-TREE.md`. The test-writer uses this to generate cross-page test cases.
-
-```
-users/create-form       ──creates──▶  users/user-table
-users/user-table        ──flows──▶    dashboard/recent-activity
-settings/roles          ──populates── users/create-form (role dropdown)
-```
-
----
-
-## State Tracking
-
-`src/docs/STATE.md` tracks all progress. Run `/orb-status` at any time:
-
-```
-Ouroboros Tester Dashboard
-══════════════════════════════════════════════════
-
-Domain: My App (https://app.example.com)
-
-Pages:
-  ● user-management    ████████████░░░░  75%  [3/4 sections, 2 verified, 1 tested]
-  ● dashboard                ██████░░░░░░░░░░  37%  [2/3 sections, 1 verified, 0 tested]
-  ○ settings                    ░░░░░░░░░░░░░░░░   0%  [not started]
-
-Test Infrastructure: ✓ Set up
-Tests: 12 written, 10 passing, 2 failing
-
-Next Steps:
-  → /orb-explore https://app.example.com/settings --name "Settings"
-  → /orb-verify dashboard
-```
-
----
-
-## Quality Gates
-
-Validation scripts act as hard gates between pipeline stages. Nothing moves forward without passing.
-
-| Gate | Runs after | Validates |
-|------|------------|-----------|
-| `validate-spec.mjs` | explore, verify | Spec completeness: required fields, scenario format, cross-references |
-| `validate-architecture.mjs` | architect | POM integrity: fixture wiring, component usage, import paths |
+Quality gates that ensure specs and architecture meet standards before progressing.
 
 ```bash
-npm run validate:specs                               # all specs
-node scripts/validate-spec.mjs src/docs/.../spec.md  # single spec
+# Validate a single spec
+node scripts/validate-spec.mjs src/docs/products/sections/listing/spec.md
+
+# Validate all specs
+node scripts/validate-spec.mjs --all
+
+# Validate architecture integrity
+node scripts/validate-architecture.mjs
+
+# API probe utilities
+node scripts/api-probe.mjs auth                          # Authenticate
+node scripts/api-probe.mjs probe GET /api/products        # Probe endpoint
+node scripts/api-probe.mjs verify-contract src/docs/.../impl.md  # Verify API contract
 ```
 
 ---
 
-## Design Principles
+## Supported AI Tools
 
-- **Spec-first** — Nothing is tested that isn't first documented in a verified spec
-- **Proven interactions** — Every spec entry is backed by executed-and-observed Playwright evidence
-- **Goal-backward verification** — Verify "can users do X?" not "did the agent write Y?"
-- **File-based state** — All progress lives in Markdown — readable, diffable, committable
-- **Cross-page awareness** — Data relationships between pages are tracked and tested end-to-end
-- **User-facing locators** — `getByRole()`, `getByLabel()`, `getByText()` preferred over CSS selectors
-- **API for data, UI for assertions** — Direct API calls for test setup; UI interactions for what users actually see
+Ouroboros Tester works with AI coding assistants that support Playwright MCP (browser automation). Commands are provided as:
+
+| Tool | Command format | Location |
+|------|---------------|----------|
+| **GitHub Copilot** | `/orb-*` slash commands | `.github/prompts/orb-*.prompt.md` |
+| **Claude Code** | `/orb-*` slash commands | `.claude/commands/orb-*.md` |
+
+Both tools reference the same shared workflow and agent files — behavior is identical regardless of which assistant you use.
 
 ---
 
-## Scripts
+## Design Philosophy
 
-```bash
-# Development
-npm run build              # Compile TypeScript to dist/
-npm run dev                # Watch mode compilation
-npm run typecheck          # Type-check without emit
-
-# Tests
-npm test                   # Run Playwright tests (headless)
-npm run test:headed        # With browser visible
-npm run test:ui            # Playwright UI mode
-npm run test:debug         # Step-through debugger
-npm run test:report        # Open HTML report
-
-# Validation
-npm run validate:specs     # Validate all specs
-
-# API Utilities
-npm run api:auth           # Login and save storageState
-npm run api:probe          # Probe an API endpoint
-npm run api:smoke          # Full auth + API smoke test
+```text
+→ spec-first, not code-first
+→ proven interactions, not assumed ones
+→ agents explore, humans review
+→ test what you document, document what you prove
+→ reusable infrastructure, domain-specific tests
 ```
 
 ---
 
-## Multi-LLM Support
-
-Commands are thin wrappers — all logic lives in shared workflow and agent files. This means Ouroboros Tester works with both Claude Code and GitHub Copilot without duplicating any behavior.
-
-| Path | Purpose | Used By |
-|------|---------|---------|
-| `.github/workflows/*.md` | Workflow steps (source of truth) | Claude + Copilot |
-| `.github/agents/*.md` | Agent protocols (source of truth) | Claude + Copilot |
-| `.claude/commands/orb-*.md` | Claude Code slash commands | Claude Code |
-| `.github/prompts/orb-*.prompt.md` | Copilot slash commands | GitHub Copilot |
-
-To update a command's behavior, edit only the shared workflow or agent file. Never duplicate logic into command wrappers.
-
----
-
-## Contributing
-
-Bug fixes and improvements welcome as PRs. For larger changes, open an issue first so we can align on approach.
-
-### Development
+## Development
 
 ```bash
+git clone https://github.com/hadetan/ouroboros-tester.git
+cd ouroboros-tester
 npm install
-npm run build
-npm run typecheck
+npm run build          # Compile TypeScript to dist/
+npm run dev            # Watch mode
+npm run typecheck      # Type-check without emit
 ```
 
 ---

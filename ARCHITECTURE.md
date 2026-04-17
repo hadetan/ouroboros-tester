@@ -2,22 +2,44 @@
 
 ## Architecture Overview
 
-Ouroboros Tester is a spec-driven test automation framework that uses AI agents with Playwright MCP to explore, document, verify, and generate tests for any web application. Everything lives inside `src/` — the framework, domain code, specs, and tests.
+Ouroboros Tester is a spec-driven test automation framework that uses AI agents with Playwright MCP to explore, document, verify, and generate tests for any web application. It is published as an npm package (`ouroboros-tester`) that provides both a CLI for project scaffolding and a library of reusable test infrastructure.
 
 ### Design Philosophy
 
-The `src/` directory is the single source of truth. It contains the framework (base classes, components, fixtures, helpers), domain page objects, domain documentation (requirement specs), and test cases. Nothing lives outside of it except configuration and build tooling.
+The framework separates **reusable infrastructure** (shipped in the npm package) from **domain-specific code** (generated per-project by agents). Users install globally, scaffold a project with `orb init`, and then use AI agents to generate domain-specific tests.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ouroboros-tester                                           │
+│  npm package: ouroboros-tester                              │
 │                                                             │
-│  src/                        ← Everything lives here        │
-│  ├── base/page.ts            ← BasePage class               │
+│  dist/                       ← Compiled framework library   │
+│  ├── base/page.js            ← BasePage class               │
 │  ├── components/             ← Generic UI components        │
 │  ├── fixtures/               ← Fixture factories            │
-│  ├── helpers/                ← Constants, data-factory, API │
-│  ├── utils/config.ts         ← Config loader (.ouroboros/)  │
+│  ├── helpers/                ← API helper, assertions       │
+│  ├── utils/config.js         ← Config loader (.ouroboros/)  │
+│  └── cli/                    ← CLI (init command)           │
+│                                                             │
+│  bin/orb.js                  ← CLI entry point              │
+│  templates/                  ← Scaffolding templates        │
+│  scripts/                    ← API probe, validators        │
+│  .github/                    ← Agents, prompts, workflows   │
+│  .claude/commands/           ← Claude Code commands         │
+└─────────────────────────────────────────────────────────────┘
+
+           orb init <url>
+                │
+                ▼
+                
+┌─────────────────────────────────────────────────────────────┐
+│  User project: my-app-tests/                                │
+│                                                             │
+│  .ouroboros/config.json      ← Project config (credentials) │
+│  .github/                    ← Copied agents, prompts, etc  │
+│  .claude/commands/           ← Copied Claude commands       │
+│  scripts/                    ← Copied API probe, validators │
+│                                                             │
+│  src/                        ← Domain code (agent-generated)│
 │  ├── pages/                  ← Domain page objects (POMs)   │
 │  │   └── {module}/{page}.page.ts                            │
 │  ├── docs/                   ← Domain requirement specs     │

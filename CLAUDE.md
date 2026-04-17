@@ -4,7 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Ouroboros Tester** is a spec-driven AI test automation framework. It uses specialized agents to explore web pages, document behavior as verified specs, then generate Playwright test infrastructure. The current domain is `profit-automation` targeting `https://dev.profitechnologies.com`.
+**Ouroboros Tester** is a spec-driven AI test automation framework published as an npm package. It uses specialized agents to explore web pages, document behavior as verified specs, then generate Playwright test infrastructure. Users install it globally (`npm install -g ouroboros-tester`) and scaffold new projects with `orb init <url>`.
+
+## Package Structure
+
+This repo IS the npm package. It contains:
+- **Framework source** (`src/base`, `src/components`, `src/fixtures`, `src/helpers`, `src/utils`) — compiled to `dist/`, shipped in the package
+- **CLI** (`src/cli/`, `bin/orb.js`) — the `orb` command for project scaffolding
+- **Agent/workflow definitions** (`.github/agents`, `.github/workflows`, `.github/prompts`) — copied to user projects during init
+- **Scripts** (`scripts/`) — API probe, validators — copied to user projects
+- **Templates** (`templates/`) — scaffolding templates for new projects
+
+Domain-specific code (`src/pages`, `src/tests`, `src/docs`) is generated per-project by agents and NOT tracked here.
 
 ## Commands
 
@@ -81,14 +92,23 @@ URL: /CategoryName/SubPage?tab=listing
 ```
 
 ### Source Layout (`src/`)
-- `docs/` — Generated specs (spec.md + impl.md per section), STATE.md, DOMAIN-TREE.md (specs are gitignored; STATE and DOMAIN-TREE are tracked)
+
+**Framework code (in npm package, tracked in git):**
+- `index.ts` — Public API exports
+- `cli/` — CLI commands (init, etc.)
 - `base/` — BasePage class (all page objects inherit from this)
 - `components/` — Reusable UI component objects (table, form, modal, navigation, toast)
-- `fixtures/` — Playwright test fixtures (auth setup, data manager, domain fixture)
-- `helpers/` — API helper, assertion helper, data factory, constants
+- `fixtures/` — Base Playwright test fixtures (base fixture, data manager)
+- `helpers/` — API helper, assertion helper
 - `utils/` — Config loader for `.ouroboros/config.json`
+
+**Domain code (generated per-project by agents, NOT in npm package):**
+- `docs/` — Generated specs (spec.md + impl.md per section), STATE.md, DOMAIN-TREE.md
 - `pages/` — Generated page objects (one per URL, query params become sections)
-- `tests/` — Generated test specs
+- `tests/` — Generated test specs + playwright config + auth setup
+- `fixtures/test.fixture.ts` — Domain-specific test fixture (extends base)
+- `helpers/constants.ts` — Domain routes, messages, validation rules
+- `helpers/data-factory.ts` — Entity generators (domain-specific)
 
 ### Key Principles
 1. **Spec-first:** Nothing is tested that isn't first documented in a verified spec (`src/docs/`)
