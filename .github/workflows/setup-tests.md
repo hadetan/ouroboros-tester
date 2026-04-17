@@ -31,8 +31,9 @@ Analyze verified specs, create production-ready Playwright test project with pro
 </step>
 
 <step name="analyze_domain">
-1. Read all verified specs from `src/docs/`
-2. Read `src/docs/DOMAIN-TREE.md`
+1. Read `.ouroboros/testing-scope.md` — scope controls what infrastructure to build
+2. Read all verified specs from `src/docs/`
+3. Read `src/docs/DOMAIN-TREE.md`
 3. Read source in `src/` — understand base classes, components, fixtures, helpers
 4. Identify common UI patterns across pages:
    - Shared components (tables, forms, modals, navigation)
@@ -47,7 +48,7 @@ Spawn test-architect agent to create domain-specific files in `src/`:
 
 1. `src/tests/playwright.config.ts` — projects for auth setup + browsers
 2. `src/fixtures/test.fixture.ts` — domain fixture extending `src/fixtures/base.fixture.ts`
-3. `src/tests/fixtures/auth.setup.ts` — authentication using `src/fixtures/auth.setup.ts`
+3. `src/tests/fixtures/auth.setup.ts` — Playwright setup test using `test as setup` API
 4. `src/pages/{module}/{page}.page.ts` — per documented page (extending `src/base/page.ts`)
 5. `src/helpers/data-factory.ts` — data factory (base + domain generators)
 6. `src/helpers/constants.ts` — all constants (framework + domain)

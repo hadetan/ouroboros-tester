@@ -297,3 +297,40 @@ After completing each section:
 10. **Cross-page relationships → update `src/docs/DOMAIN-TREE.md` immediately.**
 11. No "Not fully explored" or "Requires follow-up" in specs — explore now or not at all.
 12. ALL browser data offloaded to `playwright/trash/` via `filename` parameter. Never dump large outputs into context.
+
+---
+
+## Data Safety
+
+Exploration requires triggering CRUD operations to document behavior. These rules govern how:
+
+**ALWAYS:**
+- Create minimal test records (one at a time) to prove CRUD operations work
+- Delete only the specific records you just created during exploration
+- Use the same browser session for create → verify → delete sequences
+
+**NEVER:**
+- Delete records you did not create during this exploration session
+- Write standalone scripts for data queries, cleanup, or batch operations
+- Loop over records to delete or modify them in bulk
+- Search for and delete records matching a pattern
+- Modify user accounts, roles, or permissions
+- Create files outside the project workspace (no `/tmp`, no home directory)
+
+### Terminal Usage
+
+Terminal is for running project tools. Not for creating or executing ad-hoc scripts.
+
+**Permitted:**
+- `node scripts/api-probe.mjs probe GET ...` — read-only API inspection
+- `node scripts/api-probe.mjs run --url ... --code ...` — browser-based element probing
+- `node scripts/api-probe.mjs auth` — re-authenticate
+- `node scripts/validate-spec.mjs ...` — spec validation
+
+**Prohibited:**
+- `node scripts/api-probe.mjs probe DELETE/PUT/POST ...` — no data mutations from terminal
+- Creating .js/.mjs/.ts/.sh/.py files and executing them
+- `node -e "..."` or `node <<EOF` for inline scripts
+- Any `for`/`while` loop in terminal that calls api-probe or makes HTTP requests
+- `curl`, `wget`, `fetch` for direct API calls
+- Writing files to `/tmp` or anywhere outside the project workspace

@@ -26,6 +26,20 @@ Always use Playwright native actions (click, dblclick, fill, type, press) — ne
 
 ---
 
+## Scope Awareness
+
+Read `.ouroboros/testing-scope.md` before verifying. Scope controls what you verify.
+
+- **"What to test" has entries** — Only verify recipes and scenarios for listed operations. Skip everything else.
+- **"What not to test" has entries** — Never trigger, verify, or re-execute those interactions. Even if spec documents them.
+- **Both empty or missing** — Verify everything.
+
+Verification feeds test generation. Never verify what won't become a test.
+
+If scope excludes a CRUD operation, skip its recipe re-execution, flow simulation step, and absence verification. Mark those sections `verified: scope-excluded` instead.
+
+---
+
 ## Context Management
 
 Context overflow kills verification. Offload data to files, read only what's needed.
@@ -79,9 +93,10 @@ Combine related DOM inspections into ONE evaluate call. Target: ~3-5 evaluates p
 
 ### Phase 1: Load Existing Specs
 
-1. Read page spec: `src/docs/{module}/{page}/spec.md`
-2. For each section: read both `spec.md` and `impl.md`
-3. Read `src/docs/DOMAIN-TREE.md`
+1. Read `.ouroboros/testing-scope.md` — determine what's in/out of scope
+2. Read page spec: `src/docs/{module}/{page}/spec.md`
+3. For each section: read both `spec.md` and `impl.md`
+4. Read `src/docs/DOMAIN-TREE.md`
 
 ### Phase 2: Recipe Re-Execution (MOST CRITICAL)
 
@@ -210,3 +225,42 @@ Spec CANNOT be marked `verified` if:
 ## Data Persistence
 
 Write corrected `spec.md` + `impl.md` after completing verification of each section. Update `src/docs/STATE.md` with verification progress. Update `src/docs/DOMAIN-TREE.md` with any relationship corrections/additions.
+
+
+---
+
+## Data Safety
+
+Verification requires executing CRUD operations to confirm spec accuracy. These rules govern how:
+
+**ALWAYS:**
+- Create minimal test records (one at a time) to verify CRUD operations
+- Delete only the specific records you just created during verification
+- Use the same browser session for create → verify → delete sequences
+
+**NEVER:**
+- Delete records you did not create during this verification session
+- Write standalone scripts for data queries, cleanup, or batch operations
+- Loop over records to delete or modify them in bulk
+- Search for and delete records matching a pattern
+- Modify user accounts, roles, or permissions
+- Create files outside the project workspace (no `/tmp`, no home directory)
+
+### Terminal Usage
+
+Terminal is for running project tools. Not for creating or executing ad-hoc scripts.
+
+**Permitted:**
+- `node scripts/api-probe.mjs probe GET ...` — read-only API inspection
+- `node scripts/api-probe.mjs run --url ... --code ...` — browser-based verification
+- `node scripts/api-probe.mjs auth` — re-authenticate
+- `node scripts/api-probe.mjs verify-contract ...` — contract verification
+- `node scripts/validate-spec.mjs ...` — spec validation
+
+**Prohibited:**
+- `node scripts/api-probe.mjs probe DELETE/PUT/POST ...` — no data mutations from terminal
+- Creating .js/.mjs/.ts/.sh/.py files and executing them
+- `node -e "..."` or `node <<EOF` for inline scripts
+- Any `for`/`while` loop in terminal that calls api-probe or makes HTTP requests
+- `curl`, `wget`, `fetch` for direct API calls
+- Writing files to `/tmp` or anywhere outside the project workspace

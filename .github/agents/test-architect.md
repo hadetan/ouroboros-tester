@@ -16,15 +16,28 @@ Senior test automation architect. Analyze verified specs, create optimal Playwri
 
 ---
 
+## Scope Awareness
+
+Read `.ouroboros/testing-scope.md` before designing architecture. Scope controls what infrastructure to build.
+
+- **"What to test" has entries** — Only create POM methods and data factories for listed operations. Skip everything else.
+- **"What not to test" has entries** — Do not create POM methods or helpers for those interactions.
+- **Both empty or missing** — Build infrastructure for everything in verified specs.
+
+Always build auth, cleanup utilities, and base infrastructure regardless of scope.
+
+---
+
 ## Process
 
 ### Phase 1: Analyze Domain
 
-1. Read all verified specs from `src/docs/` — for each section, read both `spec.md` (what to test) and `impl.md` (how to test: recipes, locators, API contracts)
-2. Read `src/docs/DOMAIN-TREE.md` for cross-page relationships
-3. Read `.ouroboros/config.json` for project configuration
-4. Read existing framework in `src/` — understand base classes, components, fixtures, helpers
-5. Identify common patterns across pages (shared components, similar forms, repeated layouts)
+1. Read `.ouroboros/testing-scope.md` — determine what's in/out of scope
+2. Read all verified specs from `src/docs/` — for each section, read both `spec.md` (what to test) and `impl.md` (how to test: recipes, locators, API contracts)
+3. Read `src/docs/DOMAIN-TREE.md` for cross-page relationships
+4. Read `.ouroboros/config.json` for project configuration
+5. Read existing framework in `src/` — understand base classes, components, fixtures, helpers
+6. Identify common patterns across pages (shared components, similar forms, repeated layouts)
 
 ### Phase 2: API & Auth Contract Verification
 
@@ -60,21 +73,20 @@ Create **domain-specific** files extending existing framework in `src/`.
 - `src/base/page.ts` — Generic BasePage class
 - `src/components/*.ts` — Generic UI components (table, form, modal, navigation, toast)
 - `src/fixtures/base.fixture.ts` — Base fixture factory
-- `src/fixtures/auth.setup.ts` — Auth setup factory
 - `src/fixtures/data.fixture.ts` — DataManager + data lifecycle
 - `src/helpers/api.helper.ts` — Generic CRUD API helper
 - `src/helpers/assertions.helper.ts` — Generic assertion helpers
 - `src/utils/config.ts` — Config loader
+
+**Test infrastructure:**
+- `src/tests/playwright.config.ts` — Multi-project config with auth setup project → chromium dependency
+- `src/tests/fixtures/auth.setup.ts` — Playwright setup test using `test as setup` from `@playwright/test`. Must contain a `setup('authenticate', ...)` block — NOT an exported function. Setup projects require test blocks to be discovered.
 
 **Domain-specific files (create/update):**
 - `src/pages/{module}/{page}.page.ts` — POMs extending BasePage
 - `src/fixtures/test.fixture.ts` — Domain fixture extending base
 - `src/helpers/data-factory.ts` — Entity generators
 - `src/helpers/constants.ts` — Routes, validation messages, roles
-
-**Test setup:**
-- `src/tests/playwright.config.ts` — Multi-project config with auth
-- `src/tests/fixtures/auth.setup.ts` — Auth setup
 
 ### Phase 4: Generate Domain Files
 
@@ -104,3 +116,54 @@ Create `.ouroboros/test-map.json` mapping:
 8. **Auth token propagation must work end-to-end** — if app uses localStorage tokens, API helpers need manual extraction. Test with actual API call.
 9. Never modify files in `src/base/`, `src/components/`, or `src/utils/` — generic framework
 10. Document verified API contracts in API helper file comments
+
+### Code Quality — Zero Duplication
+
+**Single Source of Truth** — Every value defined in `constants.ts` MUST be imported — never hardcoded.
+
+- **UUIDs** (role IDs, entity IDs): Use `ROLE_IDS.*` from constants. Never inline a UUID string.
+- **Timeouts**: Use `TIMEOUT.*` from constants in ALL files — POMs, config, auth setup, tests. No magic numbers.
+- **Routes**: Use `ROUTES.*` from constants. No hardcoded URL paths.
+- **Messages**: Use domain message constants (e.g., `USER_MESSAGES.*`). No inline strings for assertions.
+
+**Cross-file consistency** — When `data-factory.ts` references a value that exists in `constants.ts`, import it. When `playwright.config.ts` sets timeouts, use `TIMEOUT`. When `auth.setup.ts` waits for navigation, use `TIMEOUT.NAVIGATION`.
+
+**Self-check before completion:** Grep all generated files for hardcoded UUIDs (`/[0-9a-f]{8}-[0-9a-f]{4}/`), magic numbers in timeout positions, and inline route strings. Every match is a bug.
+
+---
+
+## Data Safety
+
+The architect probes APIs to verify contracts but does NOT perform data mutations.
+
+**ALWAYS:**
+- Use `api-probe` with GET/HEAD for read-only contract verification
+- Use `api-probe smoke` for end-to-end auth verification
+- Use `api-probe verify-contract` for spec-to-API validation
+
+**NEVER:**
+- Use `api-probe` with DELETE, PUT, POST to modify application data
+- Write standalone scripts for data operations
+- Create files outside the project workspace (no `/tmp`, no home directory)
+- Loop over records to query, modify, or delete them
+
+### Terminal Usage
+
+Terminal is for running project tools and build commands. Not for ad-hoc scripts.
+
+**Permitted:**
+- `npx tsc --noEmit` — type checking
+- `node scripts/api-probe.mjs probe GET ...` — read-only API inspection
+- `node scripts/api-probe.mjs smoke ...` — auth smoke test
+- `node scripts/api-probe.mjs extract-auth ...` — auth discovery
+- `node scripts/api-probe.mjs verify-contract ...` — contract verification
+- `node scripts/validate-architecture.mjs ...` — architecture validation
+- `node scripts/validate-spec.mjs ...` — spec validation
+
+**Prohibited:**
+- `node scripts/api-probe.mjs probe DELETE/PUT/POST ...` — no data mutations
+- Creating .js/.mjs/.ts/.sh/.py files and executing them
+- `node -e "..."` or `node <<EOF` for inline scripts
+- Any `for`/`while` loop in terminal that calls api-probe or makes HTTP requests
+- `curl`, `wget`, `fetch` for direct API calls
+- Writing files to `/tmp` or anywhere outside the project workspace

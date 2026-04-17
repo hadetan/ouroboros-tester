@@ -24,7 +24,8 @@ Generate comprehensive Playwright test suites for verified page specs using esta
 
 <step name="load_context" priority="first">
 1. Read `.ouroboros/config.json`
-2. Read `.ouroboros/architect-manifest.md` — binding contract from architect
+2. Read `.ouroboros/testing-scope.md` — scope controls what tests to write
+3. Read `.ouroboros/architect-manifest.md` — binding contract from architect
    - If exists → use it
    - Else → discover architecture from `src/` directly: read all files in `src/pages/`, `src/fixtures/`, `src/helpers/`, `src/components/`, `src/base/`
 3. Read `.ouroboros/test-map.json` for spec-to-test mapping

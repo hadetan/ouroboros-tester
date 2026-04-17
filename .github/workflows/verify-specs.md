@@ -23,9 +23,10 @@ Re-crawl documented pages/sections, verify spec accuracy, fix inaccuracies, mark
 
 <step name="load_context" priority="first">
 1. Read `.ouroboros/config.json`
-2. Read `src/docs/{module}/{page}/spec.md`
-3. List all sections under `src/docs/{module}/{page}/sections/`
-4. Read `src/docs/DOMAIN-TREE.md` for relationship verification
+2. Read `.ouroboros/testing-scope.md` — scope controls what to verify
+3. Read `src/docs/{module}/{page}/spec.md`
+4. List all sections under `src/docs/{module}/{page}/sections/`
+5. Read `src/docs/DOMAIN-TREE.md` for relationship verification
 </step>
 
 <step name="authenticate" condition="--auth is set">

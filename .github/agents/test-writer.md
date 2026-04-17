@@ -52,6 +52,18 @@ When investigating failures, combine checks into ONE evaluate:
 
 ---
 
+## Scope Awareness
+
+Read `.ouroboros/testing-scope.md` before writing tests. Scope controls what you test.
+
+- **"What to test" has entries** — Only write tests for listed operations. Skip everything else.
+- **"What not to test" has entries** — Never write tests for those interactions. Even if spec and POM support them.
+- **Both empty or missing** — Write tests for everything in the verified spec.
+
+If scope excludes a CRUD operation, do not generate test cases for it. Do not create `test.skip()` stubs either — simply omit.
+
+---
+
 ## Deviation Rules
 
 While writing tests, issues not anticipated by spec/architect will occur. Apply these rules automatically, track all deviations for completion report.
@@ -76,9 +88,10 @@ While writing tests, issues not anticipated by spec/architect will occur. Apply 
 
 ### Phase 1: Load Architecture Contract
 
-1. Read `.ouroboros/architect-manifest.md` (fallback: discover from `src/pages/`, `src/fixtures/`, `src/helpers/`, `src/components/`, `src/base/`)
-2. Read every file listed: fixtures, POMs, components, helpers, data-factory, constants
-3. Map available: POM methods, fixtures, component classes, helper methods, constants
+1. Read `.ouroboros/testing-scope.md` — determine what's in/out of scope
+2. Read `.ouroboros/architect-manifest.md` (fallback: discover from `src/pages/`, `src/fixtures/`, `src/helpers/`, `src/components/`, `src/base/`)
+3. Read every file listed: fixtures, POMs, components, helpers, data-factory, constants
+4. Map available: POM methods, fixtures, component classes, helper methods, constants
 
 ### Phase 2: Load Verified Spec
 
@@ -192,3 +205,75 @@ Mark section test-complete in `src/docs/STATE.md`.
 12. After creating record, never assume it's on current grid page — use POM navigation
 13. Never modify files in `src/base/`, `src/components/`, or `src/utils/`
 14. Use `src/utils/config.ts` for config, `src/helpers/api.helper.ts` for API calls
+
+---
+
+## Data Safety
+
+Test data lifecycle: **create → use → clean up**. Nothing else.
+
+**ALWAYS:**
+- Create test data through DataManager fixture or API helper within test setup
+- Track every created record with `dataManager.track()` for automatic teardown
+- Use DataFactory to generate unique, identifiable test data
+- Let fixture teardown handle cleanup — it runs automatically after each test
+
+**NEVER:**
+- Write loops that iterate over records to delete or modify them
+- Search for and delete records matching a pattern ("find all X, delete each")
+- Delete records not created by the current test run
+- Create standalone scripts for data cleanup, querying, or batch operations
+- Use `api-probe` with DELETE method to clean up data outside test fixtures
+- Modify, delete, or disable user accounts in the target application
+- Execute mass operations against any API endpoint
+
+**When test data accumulates** from failed runs or incomplete teardown:
+→ Report the issue to the user. Include the record identifiers and the API endpoint.
+→ Do NOT attempt to clean it up. That is an operator task, not an agent task.
+
+### Terminal Usage
+
+Terminal is for running project tools and test infrastructure. Not for creating or executing ad-hoc scripts.
+
+**Permitted:**
+- `npx playwright test ...` — run tests
+- `npx tsc --noEmit` — type checking
+- `node scripts/api-probe.mjs probe GET ...` — read-only API diagnosis
+- `node scripts/api-probe.mjs run --url ... --code ...` — browser-based diagnosis
+- `node scripts/api-probe.mjs auth` — re-authenticate
+- `node scripts/api-probe.mjs verify-contract ...` — contract verification
+- `node scripts/validate-spec.mjs ...` — spec validation
+- `node scripts/validate-architecture.mjs ...` — architecture validation
+
+**Prohibited:**
+- `node scripts/api-probe.mjs probe DELETE ...` — no destructive API calls from terminal
+- `node scripts/api-probe.mjs probe PUT/POST ...` — no data mutations from terminal (use test fixtures)
+- Creating .js/.mjs/.ts/.sh/.py files and executing them
+- `node -e "..."` or `node <<EOF` for inline scripts
+- Any `for`/`while` loop in terminal that calls api-probe or makes HTTP requests
+- `child_process`, `execSync`, `exec` in any context
+- `curl`, `wget`, `fetch` for direct API calls
+- Writing files to `/tmp` or anywhere outside the project workspace
+
+---
+
+## Anti-Patterns
+
+These patterns are **strictly prohibited**. Each has caused real production damage.
+
+❌ **Mass-delete script:** Creating a script that queries records and loops through deleting each one.
+Why: Deletes data beyond what the agent created. Has deleted entire user databases.
+
+❌ **Ad-hoc script in /tmp:** Writing a .js/.mjs file to `/tmp` or anywhere outside the project for a one-off operation.
+Why: Bypasses all framework safety (DataManager tracking, fixture teardown, audit trail).
+
+❌ **execSync chains:** Using `child_process.execSync()` to call api-probe in a loop for batch mutations.
+Why: Untracked, unrecoverable. If it deletes the wrong records, there is no rollback.
+
+❌ **"Cleanup" before tests:** Deleting pre-existing data to get a clean slate before writing tests.
+Why: Pre-existing data belongs to the application. Tests must work alongside existing data, not destroy it.
+
+❌ **Hardcoded skip-lists:** Creating a Set of IDs to "protect" while deleting everything else.
+Why: Any ID not in the skip list gets destroyed. Missing one ID = catastrophic data loss.
+
+✅ **Correct pattern:** Create one record → test it → DataManager deletes that specific record in teardown.
