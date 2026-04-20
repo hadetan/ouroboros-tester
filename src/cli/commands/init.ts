@@ -50,6 +50,8 @@ export class InitCommand {
 
     this.copyFrameworkFiles(targetDir);
 
+    this.createMcpConfig(targetDir);
+
     this.scaffoldSrcStructure(targetDir, projectName);
 
     this.createProjectDocs(targetDir, projectName, baseUrl);
@@ -422,6 +424,25 @@ See the [Ouroboros Tester documentation](https://github.com/user/ouroboros-teste
     }
 
     console.log(`${green}  ✓ Created project documentation${reset}`);
+  }
+
+  private createMcpConfig(targetDir: string): void {
+    const mcpPath = path.join(targetDir, '.mcp.json');
+    if (fs.existsSync(mcpPath)) {
+      console.log(`${dim}  ⊘ .mcp.json already exists, skipping${reset}`);
+      return;
+    }
+
+    const config = {
+      mcpServers: {
+        playwright: {
+          command: 'npx',
+          args: ['@playwright/mcp@latest'],
+        },
+      },
+    };
+    fs.writeFileSync(mcpPath, JSON.stringify(config, null, 2) + '\n');
+    console.log(`${green}  ✓ Created .mcp.json (Playwright MCP server)${reset}`);
   }
 
   private createGitignore(targetDir: string): void {
