@@ -27,6 +27,68 @@ Always use Playwright native actions (click, dblclick, fill, type, press). Never
 
 ---
 
+## Renderable Surface
+
+DOM only contains what's currently rendered. Content hides behind boundaries:
+
+- **Scroll overflow** — Container `scrollWidth > clientWidth` or `scrollHeight > clientHeight`. Virtualized renderers create DOM nodes only for visible slice. Off-viewport content not in DOM until scrolled.
+- **Collapsed regions** — Accordions, expandable rows, "show more" toggles, nested panels.
+- **Interaction-gated** — Elements materialize only after hover, focus, row selection, or preceding action.
+
+Before concluding element absent: identify every container it could inhabit. Check each for scroll overflow. Scroll to every edge. Re-query at each position. Element absent at offset 0 may exist at offset max.
+
+---
+
+## Deferred Persistence
+
+Apps batch mutations. Action marks change pending. Save trigger flushes pending changes to server.
+
+Two save patterns:
+- **Immediate** — action fires API directly. UI updates on response.
+- **Deferred** — action marks dirty state. Explicit save trigger fires API. UI updates after save.
+
+Deferred indicators: highlighted row, unsaved badge, save button activates after action.
+
+**Proof order for any mutation:**
+1. Execute action. Observe UI for dirty/pending state.
+2. Detect save trigger: explicit button (Save/Confirm/Apply), auto-save on blur/navigate/timer.
+3. Click save trigger. Observe UI — record appears/disappears/updates.
+4. Reload page. Verify state persists.
+5. Capture API after save trigger fires, not after individual action.
+
+**UI outcome after save + reload = operation confirmed.** API capture = documentation only.
+
+Never conclude operation absent because:
+- Action produced no immediate API call.
+- API payload showed empty arrays — save not clicked yet.
+- Network capture ran before save trigger.
+
+---
+
+## View-Mode Completeness
+
+Pages contain mode controls — toggle groups, radio selectors, segment switches — that alter rendered column sets, visible row-action buttons, and available operations. Mode A exposes different features than Mode B. Default page load renders one mode only.
+
+Mode control indicators: radio button group, toggle/segment switch, dropdown that changes grid columns or row actions without navigating to new URL path.
+
+Before concluding operation absent: identify every mode control on page. Switch to each mode. At each mode: scroll container to all edges. Catalog columns, row-action buttons, toolbars. Operation visible only in non-default mode still exists.
+
+URL may encode mode state as query parameter. Note: reload can reset URL-encoded mode to default. Track current URL before any reload.
+
+---
+
+## State Preservation Through Reload
+
+Reload-to-verify-persistence resets URL-encoded state. Query parameters encoding mode, filters, active tab, sort order may vanish after reload. Page reverts to default context. Persistence check then runs in wrong mode — false negative.
+
+Before reload: record full URL including all query params.
+After reload: compare new URL to pre-reload URL.
+Params changed: re-apply original context (re-switch mode, re-select tab, re-apply filter) before verifying.
+
+Never verify persistence from different mode or context than operation was performed in.
+
+---
+
 ## Scope Awareness
 
 Read `.ouroboros/testing-scope.md` before exploring. Scope controls what you explore.
@@ -120,6 +182,7 @@ Combine related DOM inspections into ONE evaluate call. Target: ~5 evaluates per
 3. Run Page Overview Batch evaluate (to file: `playwright/trash/page-overview.json`)
 4. Read snapshot + overview to identify: sections, grids, framework, component types
 5. Identify view-switchers (tabs, accordions, toggles). Record all view names. Apply **View Discipline** — lock to active view.
+5b. Identify mode controls — radio groups, toggle/segment switches that alter grid columns or row-action buttons without full navigation. Apply **View-Mode Completeness** — each mode is a distinct renderable surface. Note default mode and all available modes.
 6. Count grids in active view — N grids = N section specs
 7. Check grid technology (standard `<table>` vs `role="grid"` custom component)
 8. Check select/dropdown technology — `role="option"` presence, text vs IDs
@@ -160,6 +223,7 @@ Cover ALL component types:
 
 MANDATORY for every grid. Absence of button ≠ absence of feature.
 
+0. **Scroll container to all edges** — Apply Renderable Surface. Check scroll overflow. Scroll right, bottom, left, top. Catalog all columns, row-action buttons, and controls revealed at each scroll position. Off-viewport content does not exist in DOM at default scroll position.
 1. **Scan for empty rows** — Check all data rows for blank cells (creation entry points).
 2. **Double-click** cells in empty rows. Inline editor appeared?
 3. **Double-click** populated row cells — inline editing available?
@@ -175,10 +239,11 @@ For each operation:
 
 1. **Before mutation** — Snapshot page state to file (pagination, filters, row count, alerts, modals)
 2. **Execute operation** — Use Playwright native actions
-3. **Capture API** — After action, call `browser_network_requests` with filter + filename
-4. **Read API data** — `read_file` the captured network data for: endpoint, method, payload fields, response shape, auth format
-5. **After mutation** — Run Post-Action Batch evaluate to file. Compare to before-state.
-6. **Document** all findings
+3. **Apply Deferred Persistence** — After action, check for dirty/pending state. If save trigger present, click it. Save trigger is part of the operation, not optional.
+4. **Verify UI** — Run Post-Action Batch evaluate to file. Record: record appeared/disappeared/updated in expected way.
+5. **Reload and re-verify** — Before reload: record full URL including all query params. Reload page. Apply State Preservation — compare new URL to pre-reload URL. If mode, tab, or filter params changed, re-apply original context. Confirm UI state persists in correct context. Persistence after reload = operation confirmed.
+6. **Capture API** — `browser_network_requests` after save trigger fires. Extract: endpoint, method, payload fields, response shape, auth format.
+7. **Document** all findings. UI truth is primary. API data documents the wire contract.
 
 **CREATE:**
 - Determine mechanism: button+modal, inline grid row (Phase 3), context menu, or absent
@@ -193,7 +258,14 @@ For each operation:
 - Compare edit form to create form — document disabled, hidden, new fields in edit mode
 - Inline: test per-column editability on populated rows, identify save trigger
 
-**DELETE:** Execute delete with confirmation. Document confirmation UI type and success signal. Only test cancel/dismiss if scope includes cancellation flows.
+**DELETE:**
+- Apply Renderable Surface — scroll container to all edges. Action column may be off-viewport.
+- Apply View-Mode Completeness — mode controls change column sets. Delete mechanism may exist only in non-default mode. Switch modes, scroll, re-inspect row actions in each mode before concluding delete absent.
+- Locate delete mechanism: row-action button/icon, toolbar button, context menu, keyboard shortcut.
+- Execute delete action. Apply Deferred Persistence — click save trigger if required.
+- Verify UI: record absent. Before reload: record full URL including mode/filter params. Reload page. Apply State Preservation — compare URL params pre/post-reload, re-apply mode context if changed. Verify record still absent after re-establishing same context.
+- Capture API after save trigger. Document: mechanism, save pattern, success signal.
+- Only test cancel/dismiss if scope includes cancellation flows.
 
 ### Phase 5: Assertion Dry Run
 
@@ -288,15 +360,17 @@ After completing each section:
 1. **View Discipline is absolute.** Never click view-switchers. Complete all sections in active view → STOP.
 2. **Section Loop is sequential.** Finish section N (Phases 2–7 + spec files written) before starting section N+1.
 3. Use Playwright native actions only — never `dispatchEvent`/synthetic events for interaction testing.
-4. Never conclude CRUD operation absent without exhaustive evidence (Phase 3).
+4. Never conclude CRUD operation absent without exhaustive evidence (Phase 3). Exhaustive = scrolled full container (Renderable Surface) + tested deferred save pattern (Deferred Persistence) + UI confirmed after save + reload.
 5. Every feedback element: exact CSS class, ARIA role, auto-dismiss behavior. Never generic "toast."
 6. Every grid: measure row/cell dimensions, document zero-height wrappers.
 7. Every modal: DOM ancestry audit for real container. Test ALL close mechanisms.
 8. Every input: verify `.fill()` value persisted. Document working fill method.
-9. Every mutation: capture API via `browser_network_requests` (endpoint, method, payload fields, response) and DOM diff.
+9. Every mutation: UI outcome after save + reload = primary proof. API capture (after save trigger) = documentation. Never treat empty API payload as evidence operation is absent.
 10. **Cross-page relationships → update `src/docs/DOMAIN-TREE.md` immediately.**
 11. No "Not fully explored" or "Requires follow-up" in specs — explore now or not at all.
 12. ALL browser data offloaded to `playwright/trash/` via `filename` parameter. Never dump large outputs into context.
+13. Never conclude operation absent because active mode lacks control. Apply View-Mode Completeness — switch all mode states, scroll at each, before concluding.
+14. Before reload-for-persistence: record URL params. After reload: re-apply context if params changed. Never verify persistence from wrong mode or context.
 
 ---
 

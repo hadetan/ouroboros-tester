@@ -113,6 +113,8 @@ Before writing tests, verify POM covers every interaction in spec:
 
 ### Phase 4: Write Test Cases
 
+**CRUD test ordering: Create → Read → Update → Delete.** When section supports full CRUD, tests MUST follow this sequence. Create first = known test data. Delete last = clean exit. Sections with partial CRUD follow same relative order (e.g., Create → Read if no Update/Delete).
+
 **Tests must be THIN — read like user stories, not contain implementation details.**
 
 ```typescript

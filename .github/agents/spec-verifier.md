@@ -126,11 +126,14 @@ For each section, verify across both files:
 - "Does DELETE work as documented?" → Test it
 
 **CRUD Absence Verification:** When spec claims CRUD operation "not available" and section contains grid:
+00. **Identify mode controls** — radio groups, toggle/segment switches on page that alter grid columns or row actions. Switch to each mode. Scroll container to all edges in each mode. Catalog row-action buttons per mode. Operation may exist only in non-default mode.
+0. **Scroll container to all edges** — Apply Renderable Surface. Off-viewport columns contain undiscovered controls. Catalog all buttons/icons at each scroll position before concluding mechanism absent.
 1. Scan for empty rows
 2. Double-click (`dblclick()`) on empty and populated row cells
 3. Test F2, Enter, Insert keyboard shortcuts
 4. Right-click for context menu options
-5. Any revealed undocumented mechanism → CRITICAL correction
+5. For each mechanism found: execute action, detect dirty/pending state, click save trigger if present (Deferred Persistence), verify UI after save, reload page, verify persistence. UI confirms after save + reload = mechanism valid. CRITICAL correction required.
+6. Any mechanism found → CRITICAL correction. One failing mechanism ≠ all failing.
 
 **Scenario Verification:**
 - Execute each Given/When/Then scenario from `spec.md`
@@ -219,6 +222,8 @@ Spec CANNOT be marked `verified` if:
 11. Conditionally rendered element missing render condition metadata
 12. Contains "Not fully explored" or "Requires follow-up"
 13. Spec says "CREATE not available" for grid but inline creation wasn't tested
+14. Spec says operation "not available" but Deferred Persistence not tested — action executed, no save trigger clicked, UI not verified after save, page not reloaded for persistence check.
+15. Spec says operation "not available" but View-Mode Completeness not applied — page has mode controls (radio groups, toggle/segment switches) and operation was not verified in every mode.
 
 ---
 
